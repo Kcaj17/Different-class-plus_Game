@@ -1,0 +1,27 @@
+{
+  "name": "inequality-tycoon-game",
+  "version": "1.0.0",
+  "description": "Multiplayer Economic Policy & Income Distribution Board Game (Inequality Tycoon: คนละชั้น พลัส 60/40)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "economics",
+    "income-distribution",
+    "board-game",
+    "socket.io",
+    "thai-policy",
+    "gini-coefficient",
+    "lorenz-curve"
+  ],
+  "author": "Antigravity AI",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.7.5"
+  }
+}

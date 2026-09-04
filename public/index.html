@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>D&D Economic Chronicles: คนละชั้น พลัส 60/40</title>
+  <!-- Google Fonts: Prompt, Kanit, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Header, Notifications, Floating numbers -->
+    <div id="mount-header"></div>
+
+    <!-- MAIN VIEWS CONTAINER -->
+    <main id="main-content">
+      <!-- 1. Pure Player Lobby View -->
+      <div id="mount-lobby"></div>
+
+      <!-- 2. Master Screen (National Command Center) -->
+      <div id="mount-master"></div>
+
+      <!-- 3. Player View (Stage-by-Stage RPG Experience) -->
+      <div id="mount-player"></div>
+
+      <!-- 4. GameOver View -->
+      <div id="mount-gameover"></div>
+    </main>
+
+    <!-- Dialogs & Modals -->
+    <div id="mount-modals"></div>
+  </div>
+
+  <!-- Modular Entry Script -->
+  <script type="module" src="game.js"></script>
+</body>
+</html>

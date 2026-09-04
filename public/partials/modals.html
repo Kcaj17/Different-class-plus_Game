@@ -1,0 +1,167 @@
+<!-- ================= MODAL: CHARACTER REVEAL (Veil of Ignorance) ================= -->
+<div id="modal-character-reveal" class="modal-backdrop hidden">
+  <div class="veil-reveal-container">
+    <div class="veil-mystic-title">
+      <span class="sparkle-icon">✨</span>
+      <h2>ม่านหมอกแห่งความไม่รู้เปิดออก!</h2>
+      <p>ชะตากรรมได้กำหนดสถานะทางเศรษฐกิจของคุณแล้ว...</p>
+    </div>
+
+    <!-- 3D Flipping Card -->
+    <div class="veil-card-wrapper">
+      <div id="veil-flip-card" class="veil-card">
+        <!-- Front Face -->
+        <div class="veil-card-face veil-card-front">
+          <div class="veil-rune-seal">🔮</div>
+          <h3>ผ้าคลุมแห่งความไม่รู้</h3>
+          <small>John Rawls' Veil of Ignorance</small>
+        </div>
+        <!-- Back Face (Revealed) -->
+        <div class="veil-card-face veil-card-back">
+          <div class="reveal-avatar-ring">
+            <span id="reveal-avatar" class="reveal-avatar">👤</span>
+          </div>
+          <h3 id="reveal-title" class="reveal-class-title">นักผจญภัยแรงงาน</h3>
+          <span id="reveal-district" class="reveal-district-tag">เขตเศรษฐกิจที่ 1</span>
+          <p id="reveal-perk" class="reveal-perk-text">คำอธิบายความสามารถพิเศษ</p>
+
+          <div class="reveal-stats-preview">
+            <div class="r-stat"><span>ทุน (CAP)</span><strong id="reveal-cap">10</strong></div>
+            <div class="r-stat"><span>แรงงาน (LAB)</span><strong id="reveal-lab">16</strong></div>
+            <div class="r-stat"><span>อิทธิพล (INF)</span><strong id="reveal-inf">10</strong></div>
+            <div class="r-stat"><span>ดิจิทัล (DIG)</span><strong id="reveal-dig">14</strong></div>
+          </div>
+
+          <div class="reveal-gold-row">
+            <span>ทุนตั้งต้น: <strong id="reveal-gold">25,000 บาท</strong></span>
+            <span>พลังชีวิต: <strong id="reveal-hp">50 HP</strong></span>
+          </div>
+
+          <button id="btn-start-adventure" class="btn-primary btn-large btn-reveal-confirm">
+            <span>⚔️ ก้าวสู่การผจญภัย ➔</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: PARTY ROSTER (District Friends) ================= -->
+<div id="modal-party-roster" class="modal-backdrop hidden">
+  <div class="modal-dialog party-dialog glass-card">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">👥 ผู้กล้าในเขตของคุณ (10 คน)</h3>
+        <span id="party-district-name" class="text-secondary">เขตเศรษฐกิจที่ 1</span>
+      </div>
+      <button id="btn-close-party-modal" class="btn-close-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="party-roster-list" class="party-roster-scroll">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: District Inspector (for Master Screen) -->
+<div id="modal-district-inspector" class="modal-backdrop hidden">
+  <div class="modal-dialog inspector-dialog glass-card">
+    <div class="modal-header">
+      <div>
+        <h3 id="inspector-district-title" class="modal-title">เขตเศรษฐกิจที่ 1</h3>
+        <span id="inspector-round-subtitle" class="text-secondary">ไตรมาสที่ 1 / 6</span>
+      </div>
+      <button id="btn-close-inspector-modal" class="btn-close-modal">✕</button>
+    </div>
+
+    <div class="modal-body inspector-grid">
+      <div class="inspector-chart-box">
+        <div class="chart-title-tag">📈 เส้นโค้งลอเรนซ์ของเขตนี้ (Lorenz Curve)</div>
+        <div class="canvas-holder">
+          <canvas id="inspectorLorenzCanvas"></canvas>
+        </div>
+        <div class="inspector-metrics-row">
+          <div class="m-chip">Gini: <strong id="inspector-gini">0.450</strong></div>
+          <div class="m-chip">หนี้/GDP: <strong id="inspector-debt">62.0%</strong></div>
+          <div class="m-chip">GDP: <strong id="inspector-gdp">1.0M</strong></div>
+          <div class="m-chip">VAT ดึงคืน: <strong id="inspector-vat">0 บ.</strong></div>
+        </div>
+      </div>
+
+      <div class="inspector-roster-box">
+        <h4>รายชื่อ 10 ผู้กล้าในเขตนี้:</h4>
+        <div id="inspector-roster-list" class="inspector-roster-scroll"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Theory & Academic Manual -->
+<div id="modal-theory" class="modal-backdrop hidden">
+  <div class="modal-dialog theory-dialog glass-card">
+    <div class="modal-header">
+      <h3 class="modal-title">📖 คู่มือวิชาการ: การกระจายรายได้และนโยบายการคลัง</h3>
+      <button id="btn-close-modal" class="btn-close-modal">✕</button>
+    </div>
+    <div class="modal-body theory-content">
+      <h4>1. เครื่องมือวัดความเหลื่อมล้ำ</h4>
+      <p><strong>เส้นโค้งลอเรนซ์ (Lorenz Curve):</strong> แสดงสัดส่วนสะสมของประชากรเทียบกับสัดส่วนสะสมของรายได้/ทรัพย์สิน ยิ่งแอ่นออกจากเส้น 45 องศามาก ความเหลื่อมล้ำยิ่งสูง</p>
+      <p><strong>สัมประสิทธิ์จีนี (Gini Coefficient):</strong> ดัชนี 0 ถึง 1 โดย 0 คือเท่าเทียมสมบูรณ์ และ 1 คือไม่เท่าเทียมสูงสุด ประเทศไทยเฉลี่ยอยู่ที่ประมาณ 0.43 - 0.49</p>
+
+      <h4>2. โครงการ “ไทยช่วยไทย พลัส 60/40”</h4>
+      <p>รัฐร่วมจ่าย 60% ประชาชนออก 40% ช่วยกระตุ้นเงินหมุนเวียน (Multiplier Effect) เข้าสู่ร้านค้าชุมชนถุงเงิน และดึงภาษี VAT 7% กลับคืนคลัง</p>
+
+      <h4>3. แนวคิด 3 สำนักปรัชญาเศรษฐกิจ</h4>
+      <p><strong>Utilitarianism:</strong> ความสุขรวมของสังคมสูงสุด</p>
+      <p><strong>Rawlsianism:</strong> ยกระดับคุณภาพชีวิตของคนที่ยากจนที่สุด (Worst-off) ก่อน</p>
+      <p><strong>Equality of Opportunity:</strong> สร้างสนามแข่งขันที่เท่าเทียมผ่านการศึกษาและ Virtual Bank</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Master Screen Admin PIN Authentication -->
+<div id="modal-admin-auth" class="modal-backdrop hidden">
+  <div class="modal-dialog glass-card" style="max-width: 440px; text-align: center; border: 1px solid rgba(245, 158, 11, 0.4);">
+    <div class="modal-header" style="justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+      <h3 class="modal-title" style="color: #fbbf24;">🔐 ยืนยันสิทธิ์ผู้ดูแลระบบ (Admin PIN)</h3>
+    </div>
+    <div class="modal-body" style="padding: 20px 10px;">
+      <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 16px;">
+        กรุณากรอกรหัส Admin PIN เพื่อปลดล็อกคำสั่งควบคุมระบบ 20 เขต (Start, Settle, Advance)
+      </p>
+      <div style="margin-bottom: 20px;">
+        <input type="password" id="input-admin-pin" placeholder="••••" maxlength="12" autocomplete="off" style="font-size: 1.5rem; text-align: center; letter-spacing: 6px; padding: 12px; width: 80%; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.5); background: rgba(15,23,42,0.9); color: #fff;">
+      </div>
+      <div style="display: flex; justify-content: center; gap: 12px;">
+        <button id="btn-cancel-admin-pin" class="btn-secondary" style="padding: 8px 18px;">ยกเลิก</button>
+        <button id="btn-submit-admin-pin" class="btn-primary" style="padding: 8px 22px; font-weight: bold;"><span>🔓 ปลดล็อกระบบ</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit QR Code URL / IP -->
+<div id="modal-edit-qr" class="modal-backdrop hidden">
+  <div class="modal-dialog glass-card" style="max-width: 480px; text-align: left; border: 1px solid rgba(56, 189, 248, 0.4);">
+    <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+      <h3 class="modal-title" style="color: #38bdf8;">✏️ ตั้งค่า URL / IP สำหรับ QR Code</h3>
+      <button id="btn-close-edit-qr-modal" class="btn-close-modal">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 20px 14px;">
+      <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin-bottom: 14px;">
+        ระบุ URL หรือ IP Address สำหรับให้ผู้เล่นในเครือข่ายสแกนเข้าร่วมเกม (เช่น วง Wi-Fi ในห้องเรียน หรือ Ngrok/Domain)
+      </p>
+      <div style="margin-bottom: 18px;">
+        <label for="input-custom-qr-url" style="display: block; color: #94a3b8; font-size: 0.8rem; margin-bottom: 6px;">URL สำหรับสแกนเข้าเล่น:</label>
+        <input type="text" id="input-custom-qr-url" placeholder="เช่น http://192.168.1.50:3005/?view=player" maxlength="150" autocomplete="off" style="font-size: 0.95rem; padding: 10px 14px; width: 100%; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.5); background: rgba(15,23,42,0.9); color: #fff; box-sizing: border-box; font-family: var(--font-mono);">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button id="btn-cancel-edit-qr" class="btn-secondary" style="padding: 8px 18px;">ยกเลิก</button>
+        <button id="btn-submit-edit-qr" class="btn-primary" style="padding: 8px 22px; font-weight: bold;"><span>💾 อัปเดต QR Code</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+

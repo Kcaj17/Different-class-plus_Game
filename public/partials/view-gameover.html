@@ -1,0 +1,61 @@
+<!-- ================= 4. GAMEOVER VIEW ================= -->
+<section id="view-gameover" class="hidden-view">
+  <div class="gameover-hero glass-card">
+    <div id="go-icon" class="trophy-ring">🏆</div>
+    <h2 id="go-title" class="gameover-title">มหาบทสรุปการจำลองเศรษฐกิจ & การพิพากษา</h2>
+    <p id="go-desc" class="gameover-summary">ระบบเศรษฐกิจผ่านพ้น 6 ไตรมาส หนี้สาธารณะและดัชนีจีนีรอดพ้นวิกฤตได้สำเร็จ!</p>
+    <div class="final-stat-pills">
+      <div class="stat-pill">
+        <span>Gini Coefficient:</span>
+        <strong id="go-gini">0.420</strong>
+      </div>
+      <div class="stat-pill">
+        <span>หนี้สาธารณะ / GDP:</span>
+        <strong id="go-debt">64.5%</strong>
+      </div>
+      <div class="stat-pill">
+        <span>GDP รวมทั้งระบบ:</span>
+        <strong id="go-gdp">1,450,000 บาท</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="gameover-eval-grid">
+    <div class="glass-card awards-card">
+      <h3>🎖️ การประเมินตาม 3 ปรัชญาความเป็นธรรมทางเศรษฐกิจ</h3>
+      <div class="philosophy-award-box">
+        <div class="award-header">
+          <span class="award-icon">🌟</span>
+          <strong>1. แนวคิดประโยชน์นิยม (Utilitarianism)</strong>
+        </div>
+        <p id="go-utilitarian-text">ความสุขรวมสูงสุดของสังคม: --</p>
+      </div>
+      <div class="philosophy-award-box">
+        <div class="award-header">
+          <span class="award-icon">⚖️</span>
+          <strong>2. ทฤษฎีความยุติธรรมของ Rawls (Rawlsian Justice)</strong>
+        </div>
+        <p id="go-rawlsian-text">คุณภาพชีวิตคนที่จนที่สุด: --</p>
+      </div>
+      <div class="philosophy-award-box">
+        <div class="award-header">
+          <span class="award-icon">🚀</span>
+          <strong>3. ความเสมอภาคทางโอกาส (Equality of Opportunity)</strong>
+        </div>
+        <p id="go-opportunity-text">การยกระดับกลุ่มเปราะบาง: --</p>
+      </div>
+    </div>
+
+    <div class="glass-card role-winners-card">
+      <h3>🏆 เกียรติยศผู้ชนะในแต่ละบทบาท (Role Winners)</h3>
+      <p style="color: #94a3b8; font-size: 0.9rem;">บอท 🤖 มีสิทธิ์ได้รับรางวัลเพื่อเปรียบเทียบผลงานกับคนจริง</p>
+      <div id="go-role-winners" class="role-winners-list"></div>
+    </div>
+  </div>
+
+  <div class="text-center" style="margin-top: 30px; text-align: center;">
+    <button id="btn-restart-game" class="btn-primary btn-large">
+      <span>🔄 เริ่มแคมเปญใหม่</span>
+    </button>
+  </div>
+</section>
