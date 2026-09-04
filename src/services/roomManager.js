@@ -3,7 +3,7 @@
 // Supports 200 Players (20 Districts x 10 Players) + Master Screen
 // =========================================================
 
-const { ROLE_TEMPLATES } = require('../constants/gameData');
+const { ROLE_TEMPLATES, ROUNDS_DATA } = require('../constants/gameData');
 const { calculateLorenzAndGini } = require('../engine/economicsEngine');
 const { sanitizeText } = require('../utils/security');
 
@@ -42,7 +42,7 @@ function createDistrictRoom(roomCode, districtIndex = 1, hostSocketId = null) {
     districtIndex: districtIndex,
     districtName: `เขตเศรษฐกิจที่ ${districtIndex}`,
     hostSocketId: hostSocketId,
-    status: 'playing', // Auto-ready for play
+    status: 'waiting', // Wait in assembly hall until 10 players or bots fill
     round: 1,
     maxRounds: 6,
     phase: 'action', // 'lore' | 'action' | 'settlement' | 'dashboard'
@@ -209,6 +209,24 @@ function finalizeDistrictsAndBots() {
   return activeCount;
 }
 
+// Start a specific district immediately with bots (for solo or small-party play)
+function startDistrictWithBots(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room) return null;
+
+  fillDistrictBots(room);
+  room.status = 'playing';
+  room.round = 1;
+  room.phase = 'action';
+  room.currentRoundData = ROUNDS_DATA[0];
+  room.players.forEach(p => { p.hasRolledThisRound = false; });
+
+  const eco = calculateLorenzAndGini(room.players);
+  room.macroStats.gini = eco.gini;
+
+  return room;
+}
+
 // Aggregate National Economics for the Master Screen Dashboard
 function getNationalAggregates() {
   initializeMasterDistricts();
@@ -320,6 +338,7 @@ module.exports = {
   createDistrictRoom,
   quickJoinMaster,
   fillDistrictBots,
+  startDistrictWithBots,
   finalizeDistrictsAndBots,
   getNationalAggregates
 };

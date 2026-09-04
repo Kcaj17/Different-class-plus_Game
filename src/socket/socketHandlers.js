@@ -11,6 +11,7 @@ const {
   createDistrictRoom,
   quickJoinMaster,
   fillDistrictBots,
+  startDistrictWithBots,
   finalizeDistrictsAndBots,
   getNationalAggregates
 } = require('../services/roomManager');
@@ -156,6 +157,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
           room.phase = 'action';
           room.currentRoundData = ROUNDS_DATA[0];
           room.players.forEach(p => { p.hasRolledThisRound = false; });
+          io.to(code).emit('room:started', { room, roundInfo: ROUNDS_DATA[0] });
           io.to(code).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0] });
         }
       }
@@ -271,6 +273,49 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     // ---------------------------------------------------------
+    // PLAYER RECONNECT (Seamless session restore on refresh)
+    // ---------------------------------------------------------
+    socket.on('player:reconnect', ({ playerId, roomCode }) => {
+      const cleanCode = (roomCode || '').toUpperCase().trim();
+      const room = rooms.get(cleanCode);
+
+      if (!room) {
+        socket.emit('player:reconnect_failed', {
+          reason: 'room_not_found',
+          message: 'ไม่พบห้องเดิม (ห้องอาจถูกปิดหรือเซิร์ฟเวอร์ถูกรีสตาร์ท)'
+        });
+        return;
+      }
+
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) {
+        socket.emit('player:reconnect_failed', {
+          reason: 'player_not_found',
+          message: 'ไม่พบข้อมูลตัวละครเดิมในห้องนี้'
+        });
+        return;
+      }
+
+      // Re-bind player to this socket connection
+      player.socketId = socket.id;
+      player.isDisconnected = false;
+      socket.roomCode = cleanCode;
+      socket.playerId = player.id;
+      socket.join(cleanCode);
+
+      console.log(`[Player Reconnected] ${player.name} (${player.className}) resumed in ${room.districtName} (${cleanCode})`);
+
+      socket.emit('player:reconnected', {
+        room,
+        myPlayer: player,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
+      });
+
+      // Update other players in district that this player is back
+      io.to(cleanCode).emit('room:updated', { room });
+    });
+
+    // ---------------------------------------------------------
     // D20 ROLL & ACTION RESOLUTION
     // ---------------------------------------------------------
     socket.on('player:roll_d20', async ({ actionId }) => {
@@ -302,6 +347,9 @@ function registerSocketHandlers(io, rooms, options = {}) {
         myPlayer: player,
         roomMacro: room.macroStats
       });
+
+      // Auto roll for any AI bots in this district that haven't rolled yet
+      autoRollDistrictBots(room);
 
       // Emit update to the district party
       io.to(roomCode).emit('room:updated', { room });
@@ -391,6 +439,23 @@ function registerSocketHandlers(io, rooms, options = {}) {
         type: 'bots',
         message: `🤖 ${room.districtName} เติมบอทนักผจญภัยครบ 10 คนแล้ว พร้อมเริ่มปฏิบัติการ!`
       });
+    });
+
+    socket.on('district:start_with_bots', () => {
+      const roomCode = socket.roomCode;
+      if (!roomCode) return;
+
+      const room = startDistrictWithBots(roomCode);
+      if (!room) return;
+
+      io.to(roomCode).emit('room:started', { room, roundInfo: ROUNDS_DATA[0] });
+      io.to(roomCode).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0] });
+
+      broadcastNationalUpdate({
+        type: 'start',
+        message: `🚀 ${room.districtName} รวมพลครบ 10 คนแล้ว (เติมบอท 🤖 สมบูรณ์) เริ่มต้นไตรมาสที่ 1!`
+      });
+      console.log(`[District Started with Bots] ${room.districtName} (${roomCode})`);
     });
 
     // ---------------------------------------------------------

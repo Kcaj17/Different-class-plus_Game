@@ -43,6 +43,46 @@
     </div>
   </div>
 
+  <!-- DISTRICT WAITING HALL (When room.status === 'waiting') -->
+  <div id="district-waiting-room" class="district-waiting-card glass-card hidden">
+    <div class="waiting-header">
+      <div class="waiting-badge-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+        <span class="pulse-dot"></span>
+        <span id="waiting-district-badge" class="chapter-round-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🏰 เขตเศรษฐกิจที่ 1 (DIST-01)</span>
+        <span class="stage-guide-tag">⏳ ห้องรวมพลประจำเขต</span>
+      </div>
+      <h3 class="waiting-title">กำลังรวบรวมสมาชิกผู้กล้าประจำเขต...</h3>
+      <p class="waiting-desc">
+        เพื่อความสมดุลทางเศรษฐกิจ แต่ละเขตต้องการสมาชิก 10 คน (ตัวแทน 4 ชนชั้น: นายทุน, SME, ประชาชน, และกลุ่มเปราะบาง)
+      </p>
+    </div>
+
+    <!-- Capacity Bar & Counter -->
+    <div class="waiting-roster-box">
+      <div class="roster-count-row">
+        <span style="color: #94a3b8; font-size: 0.88rem;">ความพร้อมของเขต:</span>
+        <strong id="waiting-roster-count" style="color: #38bdf8; font-family: var(--font-mono); font-size: 1.1rem;">1 / 10 คน</strong>
+      </div>
+      <div class="waiting-progress-track">
+        <div id="waiting-progress-bar" class="waiting-progress-fill" style="width: 10%;"></div>
+      </div>
+      <div id="waiting-members-list" class="waiting-members-grid">
+        <!-- Dynamically rendered members -->
+      </div>
+    </div>
+
+    <!-- Waiting Controls -->
+    <div class="waiting-actions-bar">
+      <div class="waiting-status-notice">
+        <span class="spinner-icon">🔄</span>
+        <span id="waiting-status-text">กำลังรอเพื่อนร่วมเขต หรือรอผู้ดำเนินรายการปล่อยตัวพร้อมกัน...</span>
+      </div>
+      <button id="btn-start-with-bots" class="btn btn-primary btn-large btn-glow" style="width: 100%; margin-top: 10px; padding: 14px 20px; font-size: 1.05rem;">
+        <span>🤖 เริ่มต้นทันที (เติมบอทให้ครบ 10 คน) ➔</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Stage Stepper Navigation Indicator -->
   <div class="stage-stepper-bar glass-card">
     <button id="step-pill-1" class="stage-step-pill active" onclick="window.goToPlayerStage(1)">
@@ -131,14 +171,24 @@
 
       <!-- Tactile D20 Arena -->
       <div class="d20-arena-wrapper">
-        <div id="d20-dice-cube" class="d20-cube" title="แตะเพื่อทอยเต๋า">
+        <!-- Pre-roll fate pedestal (Visible before roll) -->
+        <div id="d20-pre-roll-pedestal" class="d20-pedestal-box">
+          <div class="rune-circle-glow">
+            <span class="pedestal-rune">🔮</span>
+          </div>
+          <strong class="pedestal-title">แท่นอัญเชิญเต๋าแห่งโชคชะตา</strong>
+          <p class="pedestal-subtitle">แตะปุ่มด้านล่างเพื่ออัญเชิญและสุ่มแต้ม D20 ประจำไตรมาส</p>
+        </div>
+
+        <!-- 3D Dice Cube (Appears only when user clicks สุ่ม / roll) -->
+        <div id="d20-dice-cube" class="d20-cube scale-pop-in hidden" title="ลูกเต๋าชะตากรรม D20">
           <span id="d20-display-number" class="dice-num">20</span>
         </div>
-        <small class="dice-hint">แตะที่ลูกเต๋าหรือกดปุ่มด้านล่างเพื่อทอย</small>
+        <small id="d20-dice-hint" class="dice-hint hidden">🎲 ลูกเต๋ากำลังหมุนสุ่ม...</small>
       </div>
 
       <button id="btn-roll-d20" class="btn-roll-primary">
-        <span>🎲 ทอยเต๋า D20 ตัดสินชะตา</span>
+        <span>🎲 กดสุ่มชะตากรรม D20 ➔</span>
       </button>
 
       <!-- Result Banner -->
@@ -161,12 +211,32 @@
       </div>
 
       <!-- Quarter Completed Waiting Box (After Roll) -->
-      <div id="stage3-post-roll-box" class="quarter-waiting-box glass-card hidden" style="margin-top: 20px; text-align: center; padding: 16px; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; background: rgba(16, 185, 129, 0.08);">
-        <div style="font-size: 1.6rem; margin-bottom: 6px;">⏳</div>
-        <strong style="color: #34d399; font-size: 1.05rem; display: block;">คุณดำเนินการในไตรมาสนี้เรียบร้อยแล้ว!</strong>
-        <p id="player-waiting-hint" style="color: #94a3b8; font-size: 0.88rem; margin-top: 6px; line-height: 1.4;">
+      <div id="stage3-post-roll-box" class="quarter-waiting-box glass-card hidden" style="margin-top: 20px; text-align: center; padding: 18px 16px; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;">
+        <div id="post-roll-icon" style="font-size: 1.8rem; margin-bottom: 6px;">⏳</div>
+        <strong id="post-roll-title" style="color: #34d399; font-size: 1.05rem; display: block; font-weight: 700;">คุณดำเนินการในไตรมาสนี้เรียบร้อยแล้ว!</strong>
+        
+        <!-- District Roll Progress Bar -->
+        <div id="post-roll-progress-wrap" style="margin: 12px auto; max-width: 320px; background: rgba(0,0,0,0.35); border-radius: 10px; padding: 9px 12px; border: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+            <span style="color: #94a3b8;">ความคืบหน้าประจำเขต</span>
+            <strong id="post-roll-progress-text" style="color: #38bdf8; font-family: var(--font-mono);">ทอยแล้ว 0/10 คน (0%)</strong>
+          </div>
+          <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+            <div id="post-roll-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 4px; transition: width 0.4s ease;"></div>
+          </div>
+        </div>
+
+        <p id="player-waiting-hint" style="color: #94a3b8; font-size: 0.88rem; margin-top: 8px; line-height: 1.5;">
           กำลังรอเพื่อนร่วมเขต หรือรอผู้ดำเนินรายการเปิดไตรมาสถัดไป...
         </p>
+
+        <!-- Standalone / Host Quick Advance Button (Shown when all 10/10 have rolled) -->
+        <div id="post-roll-advance-action" class="hidden" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1);">
+          <button id="btn-district-advance" class="btn-primary btn-small" style="font-size: 0.84rem; padding: 8px 18px; background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
+            <span>🚩 สรุปผลและเปิดไตรมาสถัดไปทันที ➔</span>
+          </button>
+          <div style="color: #64748b; font-size: 0.72rem; margin-top: 4px;">(กดเพื่อเริ่มไตรมาสถัดไปทันที หรือรอผู้ดำเนินรายการสั่งการจากจอใหญ่)</div>
+        </div>
       </div>
     </div>
   </div>

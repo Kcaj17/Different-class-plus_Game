@@ -40,6 +40,17 @@ export function initSocketListeners() {
     setCurrentRoomCode(room.code);
     setCurrentRoom(room);
 
+    // Save player session to sessionStorage for seamless refresh
+    try {
+      sessionStorage.setItem('dnd_player_session', JSON.stringify({
+        playerId: myPlayer.id,
+        roomCode: room.code,
+        playerName: myPlayer.name
+      }));
+    } catch (e) {
+      console.warn('Could not save session to sessionStorage:', e);
+    }
+
     // Show dramatic Veil of Ignorance Character Reveal first!
     showCharacterReveal(myPlayer, room, () => {
       switchView('player');
@@ -47,6 +58,53 @@ export function initSocketListeners() {
       renderPlayerView(myPlayer, room, roundInfo);
       showToast(`เข้าสู่ ${room.districtName} ประจำการเรียบร้อยแล้ว!`, 'success', 3500);
     });
+  });
+
+  socket.on('player:reconnected', ({ room, myPlayer, roundInfo }) => {
+    setMyPlayer(myPlayer);
+    setCurrentRoomCode(room.code);
+    setCurrentRoom(room);
+
+    // Refresh saved session in sessionStorage
+    try {
+      sessionStorage.setItem('dnd_player_session', JSON.stringify({
+        playerId: myPlayer.id,
+        roomCode: room.code,
+        playerName: myPlayer.name
+      }));
+    } catch (e) {
+      console.warn('Could not save session to sessionStorage:', e);
+    }
+
+    // Hide any character reveal modal if open
+    const modalReveal = document.getElementById('modal-character-reveal');
+    if (modalReveal) modalReveal.classList.add('hidden');
+
+    if (room.status === 'gameover') {
+      switchView('gameover');
+      return;
+    }
+
+    // Direct switch to player view without Gacha card reveal
+    switchView('player');
+    renderPlayerView(myPlayer, room, roundInfo || room.currentRoundData);
+
+    if (room.status === 'playing') {
+      if (myPlayer.hasRolledThisRound) {
+        if (window.goToPlayerStage) window.goToPlayerStage(3);
+      } else {
+        if (window.goToPlayerStage) window.goToPlayerStage(1);
+      }
+    }
+
+    showToast(`ยินดีต้อนรับกลับมา! เชื่อมต่อเข้าสู่ ${room.districtName} สำเร็จ`, 'success', 3500);
+    playSound('click');
+  });
+
+  socket.on('player:reconnect_failed', ({ message }) => {
+    sessionStorage.removeItem('dnd_player_session');
+    switchView('lobby');
+    showToast(message || 'ไม่สามารถกลับเข้าสู่ห้องเดิมได้ กรุณาเข้าร่วมใหม่อีกครั้ง', 'warning', 4000);
   });
 
   socket.on('player:roll_resolved', ({ rollResult, myPlayer, roomMacro }) => {
@@ -61,6 +119,20 @@ export function initSocketListeners() {
   // ---------------------------------------------------------
   // DISTRICT / ROOM UPDATES
   // ---------------------------------------------------------
+  socket.on('room:started', ({ room, roundInfo }) => {
+    setCurrentRoom(room);
+    if (state.myPlayer && room.players) {
+      const me = room.players.find(p => p.id === state.myPlayer.id || p.socketId === socket.id);
+      if (me) setMyPlayer(me);
+    }
+    showToast('🚀 รวมพลครบ 10 คนแล้ว! เริ่มต้นการผจญภัยไตรมาสที่ 1', 'success', 3500);
+    playSound('fanfare');
+    if (state.myPlayer) {
+      renderPlayerView(state.myPlayer, room, roundInfo || room.currentRoundData);
+      if (window.goToPlayerStage) window.goToPlayerStage(1);
+    }
+  });
+
   socket.on('room:updated', ({ room, settlement, roundInfo }) => {
     const prevRound = state.currentRoom ? state.currentRoom.round : null;
     setCurrentRoom(room);
@@ -92,6 +164,7 @@ export function initSocketListeners() {
   });
 
   socket.on('game_over', ({ room, finalEval }) => {
+    sessionStorage.removeItem('dnd_player_session');
     playSound('fanfare');
     switchView('gameover');
     renderGameOverView(room, finalEval);

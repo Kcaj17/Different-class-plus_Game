@@ -134,6 +134,28 @@ export function renderPlayerView(player, room, roundData) {
   if (plGold) plGold.textContent = `${Math.round(player.cash).toLocaleString()} บ.`;
   if (plDebt) plDebt.textContent = `${Math.round(player.debt).toLocaleString()} บ.`;
 
+  // 0. District Waiting Hall vs Active Playing Stages
+  const waitingCard = document.getElementById('district-waiting-room');
+  const stepperBar = document.querySelector('.stage-stepper-bar');
+  const stage1 = document.getElementById('stage-encounter');
+  const stage2 = document.getElementById('stage-strategy');
+  const stage3 = document.getElementById('stage-dice');
+
+  if (room.status === 'waiting') {
+    if (waitingCard) {
+      waitingCard.classList.remove('hidden');
+      renderWaitingRoom(room, player);
+    }
+    if (stepperBar) stepperBar.classList.add('hidden');
+    if (stage1) stage1.className = 'rpg-stage hidden-stage';
+    if (stage2) stage2.className = 'rpg-stage hidden-stage';
+    if (stage3) stage3.className = 'rpg-stage hidden-stage';
+    return;
+  } else {
+    if (waitingCard) waitingCard.classList.add('hidden');
+    if (stepperBar) stepperBar.classList.remove('hidden');
+  }
+
   // 4. Chapter & Lore (Stage 1)
   const chapter = roundData || {};
   const roundTitle = document.getElementById('pl-round-title');
@@ -158,6 +180,9 @@ export function renderPlayerView(player, room, roundData) {
   const btnRoll = document.getElementById('btn-roll-d20');
   const preRollBox = document.getElementById('stage3-pre-roll-actions');
   const postRollBox = document.getElementById('stage3-post-roll-box');
+  const pedestal = document.getElementById('d20-pre-roll-pedestal');
+  const diceCube = document.getElementById('d20-dice-cube');
+  const diceHint = document.getElementById('d20-dice-hint');
 
   if (player.hasRolledThisRound) {
     if (btnRoll) {
@@ -166,17 +191,174 @@ export function renderPlayerView(player, room, roundData) {
     }
     if (preRollBox) preRollBox.classList.add('hidden');
     if (postRollBox) postRollBox.classList.remove('hidden');
+    if (pedestal) pedestal.classList.add('hidden');
+    if (diceCube) {
+      diceCube.classList.remove('hidden');
+      diceCube.classList.remove('rolling');
+    }
+    if (diceHint) diceHint.classList.add('hidden');
   } else {
     if (btnRoll) {
       btnRoll.disabled = false;
-      btnRoll.innerHTML = `<span>🎲 ทอยเต๋า D20 ตัดสินชะตา</span>`;
+      btnRoll.innerHTML = `<span>🎲 กดสุ่มชะตากรรม D20 ➔</span>`;
     }
     if (preRollBox) preRollBox.classList.remove('hidden');
     if (postRollBox) postRollBox.classList.add('hidden');
+    if (pedestal) pedestal.classList.remove('hidden');
+    if (diceCube) diceCube.classList.add('hidden');
+    if (diceHint) diceHint.classList.add('hidden');
   }
+
+  // Real-time dynamic sync for post-roll waiting box
+  updatePostRollWaitingState(room, player);
 
   // Setup Stepper Navigation Buttons
   setupStageNavigation();
+}
+
+// Dynamic Stage 3 Post-Roll Waiting Status (Real-time sync)
+export function updatePostRollWaitingState(room, player) {
+  const postRollBox = document.getElementById('stage3-post-roll-box');
+  if (!postRollBox) return;
+
+  const currentRoom = room || state.currentRoom;
+  const currentPlayer = player || state.myPlayer;
+  const totalPlayers = currentRoom && currentRoom.players ? currentRoom.players.length : 1;
+  const rolledCount = currentRoom && currentRoom.players
+    ? currentRoom.players.filter(p => p.hasRolledThisRound).length
+    : (currentPlayer && currentPlayer.hasRolledThisRound ? 1 : 0);
+  const remaining = Math.max(0, totalPlayers - rolledCount);
+  const isAllRolled = totalPlayers > 0 && rolledCount >= totalPlayers;
+  const pct = Math.min(100, Math.round((rolledCount / totalPlayers) * 100));
+
+  const iconEl = document.getElementById('post-roll-icon');
+  const titleEl = document.getElementById('post-roll-title');
+  const hintEl = document.getElementById('player-waiting-hint');
+  const progressText = document.getElementById('post-roll-progress-text');
+  const progressBar = document.getElementById('post-roll-progress-bar');
+  const advanceAction = document.getElementById('post-roll-advance-action');
+
+  if (progressBar) {
+    progressBar.style.width = `${pct}%`;
+    progressBar.style.background = isAllRolled 
+      ? 'linear-gradient(90deg, #10b981, #34d399)' 
+      : 'linear-gradient(90deg, #38bdf8, #10b981)';
+  }
+  if (progressText) {
+    progressText.textContent = `ทอยแล้ว ${rolledCount}/${totalPlayers} คน (${pct}%)`;
+    progressText.style.color = isAllRolled ? '#34d399' : '#38bdf8';
+  }
+
+  if (isAllRolled) {
+    if (iconEl) iconEl.textContent = '🎉';
+    if (titleEl) {
+      titleEl.textContent = `สมาชิกในเขตทอยครบทุกคนแล้ว (${rolledCount}/${totalPlayers} คน)!`;
+      titleEl.style.color = '#34d399';
+    }
+    if (hintEl) {
+      hintEl.innerHTML = `
+        <span style="color: #34d399; font-weight: 600;">✅ สมาชิกในเขตของคุณดำเนินการครบ 100% แล้ว</span><br>
+        <span style="color: #cbd5e1; font-size: 0.85rem; margin-top: 4px; display: inline-block;">
+          กำลังรอผู้ดำเนินรายการ (Master) สรุปผลตัวชี้วัดเศรษฐกิจ และเปิดไตรมาสถัดไป... หรือคลิกปุ่มด้านล่างเพื่อเปิดไตรมาสถัดไปทันที
+        </span>
+      `;
+    }
+    postRollBox.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+    postRollBox.style.background = 'rgba(16, 185, 129, 0.12)';
+    postRollBox.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.2)';
+
+    if (advanceAction) {
+      advanceAction.classList.remove('hidden');
+    }
+  } else {
+    if (iconEl) iconEl.textContent = '⏳';
+    if (titleEl) {
+      titleEl.textContent = 'คุณดำเนินการในไตรมาสนี้เรียบร้อยแล้ว!';
+      titleEl.style.color = '#38bdf8';
+    }
+    if (hintEl) {
+      hintEl.textContent = `กำลังรอเพื่อนร่วมเขตอีก ${remaining} คนดำเนินการวางแผนและทอยเต๋า... (ทอยแล้ว ${rolledCount}/${totalPlayers} คน)`;
+    }
+    postRollBox.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+    postRollBox.style.background = 'rgba(56, 189, 248, 0.08)';
+    postRollBox.style.boxShadow = 'none';
+
+    if (advanceAction) {
+      advanceAction.classList.add('hidden');
+    }
+  }
+
+  // Also sync the Party Roster button in top HUD
+  const btnParty = document.getElementById('btn-open-party-roster');
+  if (btnParty) {
+    if (isAllRolled) {
+      btnParty.innerHTML = `<span>👥 ปาร์ตี้ (${rolledCount}/${totalPlayers}) ✓</span>`;
+      btnParty.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+      btnParty.style.color = '#34d399';
+    } else {
+      btnParty.innerHTML = `<span>👥 ปาร์ตี้ (${rolledCount}/${totalPlayers})</span>`;
+      btnParty.style.borderColor = '';
+      btnParty.style.color = '';
+    }
+  }
+
+  // If party roster modal is currently open, live-refresh its list too
+  const modalRoster = document.getElementById('modal-party-roster');
+  if (modalRoster && !modalRoster.classList.contains('hidden') && currentRoom) {
+    const districtNameEl = document.getElementById('party-district-name');
+    if (districtNameEl) {
+      if (isAllRolled) {
+        districtNameEl.innerHTML = `<span>${currentRoom.districtName} (${totalPlayers}/10 คน)</span> • <span style="color: #34d399; font-weight: 600;">✅ ทอยครบแล้ว ${rolledCount}/${totalPlayers} คน</span>`;
+      } else {
+        districtNameEl.innerHTML = `<span>${currentRoom.districtName} (${totalPlayers}/10 คน)</span> • <span style="color: #38bdf8; font-weight: 500;">ทอยแล้ว ${rolledCount}/${totalPlayers} คน</span>`;
+      }
+    }
+  }
+}
+
+// Render District Waiting Hall
+function renderWaitingRoom(room, player) {
+  const badge = document.getElementById('waiting-district-badge');
+  const countEl = document.getElementById('waiting-roster-count');
+  const bar = document.getElementById('waiting-progress-bar');
+  const list = document.getElementById('waiting-members-list');
+  const btnStartWithBots = document.getElementById('btn-start-with-bots');
+
+  if (badge) badge.textContent = `🏰 ${room.districtName} (${room.code})`;
+
+  const total = room.players ? room.players.length : 0;
+  if (countEl) countEl.textContent = `${total} / 10 คน`;
+  if (bar) bar.style.width = `${Math.min(100, total * 10)}%`;
+
+  if (list && room.players) {
+    list.innerHTML = room.players.map((p, idx) => {
+      const isMe = p.id === player.id;
+      return `
+        <div class="waiting-member-item" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; border-left: 3px solid ${isMe ? '#10b981' : '#38bdf8'}; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2rem;">${p.avatar || '👤'}</span>
+            <div>
+              <strong style="color: #fff;">${idx + 1}. ${p.name} ${isMe ? '(คุณ)' : (p.isBot ? '🤖' : '')}</strong>
+              <small style="display: block; color: #94a3b8; font-size: 0.75rem;">${p.className || p.title}</small>
+            </div>
+          </div>
+          <span style="color: #34d399; font-size: 0.78rem; font-weight: 500;">พร้อมแล้ว ✓</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (btnStartWithBots && !btnStartWithBots.dataset.bound) {
+    btnStartWithBots.dataset.bound = 'true';
+    btnStartWithBots.onclick = () => {
+      playSound('fanfare');
+      btnStartWithBots.disabled = true;
+      btnStartWithBots.innerHTML = '<span>⏳ กำลังระดมพลบอทเข้าประจำการ...</span>';
+      if (socket) {
+        socket.emit('district:start_with_bots');
+      }
+    };
+  }
 }
 
 // Helper: Render D&D Attribute with Modifier
@@ -421,6 +603,24 @@ function setupStageNavigation() {
       openPartyRosterModal();
     });
   }
+
+  // District Advance Round Button (Inside Stage 3 Post-Roll Box)
+  const btnDistrictAdvance = document.getElementById('btn-district-advance');
+  if (btnDistrictAdvance && !btnDistrictAdvance.dataset.hasListener) {
+    btnDistrictAdvance.dataset.hasListener = 'true';
+    btnDistrictAdvance.addEventListener('click', () => {
+      playSound('cash');
+      btnDistrictAdvance.disabled = true;
+      btnDistrictAdvance.innerHTML = '<span>⏳ กำลังประมวลผลเศรษฐกิจ...</span>';
+      if (socket) {
+        socket.emit('district:advance_round');
+      }
+      setTimeout(() => {
+        btnDistrictAdvance.disabled = false;
+        btnDistrictAdvance.innerHTML = '<span>🚩 สรุปผลและเปิดไตรมาสถัดไปทันที ➔</span>';
+      }, 2000);
+    });
+  }
 }
 
 // Trigger D20 Roll with Audio & Realistic Slot Machine Shuffling
@@ -438,16 +638,23 @@ export function triggerPlayerD20Roll() {
 
   const btnRoll = document.getElementById('btn-roll-d20');
   const diceElement = document.getElementById('d20-dice-cube');
+  const pedestal = document.getElementById('d20-pre-roll-pedestal');
+  const diceHint = document.getElementById('d20-dice-hint');
   const resultBanner = document.getElementById('d20-result-banner');
   const numEl = document.getElementById('d20-display-number');
 
   if (btnRoll) {
     btnRoll.disabled = true;
-    btnRoll.innerHTML = `<span>🎲 ลูกเต๋ากำลังหมุน...</span>`;
+    btnRoll.innerHTML = `<span>🎲 ลูกเต๋ากำลังหมุนสุ่ม...</span>`;
   }
+  // Reveal D20 cube with pop-in animation, hide pedestal
+  if (pedestal) pedestal.classList.add('hidden');
   if (diceElement) {
+    diceElement.classList.remove('hidden');
     diceElement.classList.add('rolling');
+    diceElement.classList.add('scale-pop-in');
   }
+  if (diceHint) diceHint.classList.remove('hidden');
   if (resultBanner) {
     resultBanner.classList.add('hidden');
   }
@@ -503,6 +710,7 @@ export function showRollResolution(rollResult, myPlayer) {
     const postRollBox = document.getElementById('stage3-post-roll-box');
     if (preRollBox) preRollBox.classList.add('hidden');
     if (postRollBox) postRollBox.classList.remove('hidden');
+    updatePostRollWaitingState(state.currentRoom, myPlayer);
 
     isRolling = false;
 
@@ -584,6 +792,7 @@ export function handleRollError() {
   const postRollBox = document.getElementById('stage3-post-roll-box');
   if (preRollBox) preRollBox.classList.add('hidden');
   if (postRollBox) postRollBox.classList.remove('hidden');
+  updatePostRollWaitingState(state.currentRoom, state.myPlayer);
 }
 
 // Reset mobile player view when advancing to a new quarter
@@ -604,15 +813,25 @@ export function onNewQuarterStarted(newRound) {
     aiGmBox.classList.add('hidden');
   }
 
-  // 3. Reset dice cube display to 20
+  // 3. Reset dice arena: hide dice cube and show pedestal
+  const diceCube = document.getElementById('d20-dice-cube');
+  const pedestal = document.getElementById('d20-pre-roll-pedestal');
+  const diceHint = document.getElementById('d20-dice-hint');
   const numEl = document.getElementById('d20-display-number');
+
+  if (diceCube) {
+    diceCube.classList.add('hidden');
+    diceCube.classList.remove('rolling');
+  }
+  if (pedestal) pedestal.classList.remove('hidden');
+  if (diceHint) diceHint.classList.add('hidden');
   if (numEl) numEl.textContent = '20';
 
   // 4. Reset roll button & Stage 3 action bars
   const btnRoll = document.getElementById('btn-roll-d20');
   if (btnRoll) {
     btnRoll.disabled = false;
-    btnRoll.innerHTML = `<span>🎲 ทอยเต๋า D20 ตัดสินชะตา</span>`;
+    btnRoll.innerHTML = `<span>🎲 กดสุ่มชะตากรรม D20 ➔</span>`;
   }
   const preRollBox = document.getElementById('stage3-pre-roll-actions');
   const postRollBox = document.getElementById('stage3-post-roll-box');
@@ -701,8 +920,14 @@ export function openPartyRosterModal() {
   const totalPlayers = room.players ? room.players.length : 0;
   const rolledCount = room.players ? room.players.filter(p => p.hasRolledThisRound).length : 0;
 
+  const isAllRolled = totalPlayers > 0 && rolledCount >= totalPlayers;
+
   if (districtNameEl) {
-    districtNameEl.innerHTML = `<span>${room.districtName} (${totalPlayers}/10 คน)</span> • <span style="color: #38bdf8; font-weight: 500;">ทอยแล้ว ${rolledCount}/${totalPlayers} คน</span>`;
+    if (isAllRolled) {
+      districtNameEl.innerHTML = `<span>${room.districtName} (${totalPlayers}/10 คน)</span> • <span style="color: #34d399; font-weight: 600;">✅ ทอยครบแล้ว ${rolledCount}/${totalPlayers} คน</span>`;
+    } else {
+      districtNameEl.innerHTML = `<span>${room.districtName} (${totalPlayers}/10 คน)</span> • <span style="color: #38bdf8; font-weight: 500;">ทอยแล้ว ${rolledCount}/${totalPlayers} คน</span>`;
+    }
   }
 
   if (listContainer && room.players) {

@@ -24,16 +24,47 @@ if (document.readyState === 'loading') {
   bootApp();
 }
 
-// Check URL Query params (e.g. ?view=master or ?view=player)
+// Check URL Query params (e.g. ?view=master or ?view=player) & Restore Session
 function checkUrlRouting() {
   const urlParams = new URLSearchParams(window.location.search);
   const viewParam = urlParams.get('view');
 
   if (viewParam === 'master') {
     openMasterScreen();
-  } else {
-    switchView('lobby');
+    return;
   }
+
+  // Check if player has an existing session in sessionStorage for seamless refresh
+  const sessionStr = sessionStorage.getItem('dnd_player_session');
+  if (sessionStr) {
+    try {
+      const session = JSON.parse(sessionStr);
+      if (session && session.playerId && session.roomCode) {
+        showToast('กำลังเชื่อมต่อเข้าสู่เขตเดิมของคุณ...', 'info', 2000);
+        const attemptReconnect = () => {
+          if (socket) {
+            socket.emit('player:reconnect', {
+              playerId: session.playerId,
+              roomCode: session.roomCode
+            });
+          }
+        };
+
+        if (socket && socket.connected) {
+          attemptReconnect();
+        } else if (socket) {
+          socket.once('connect', attemptReconnect);
+        }
+        return;
+      }
+    } catch (e) {
+      console.warn('Invalid player session JSON:', e);
+      sessionStorage.removeItem('dnd_player_session');
+    }
+  }
+
+  // Default fallback: Switch to lobby
+  switchView('lobby');
 }
 
 function openMasterScreen() {
@@ -432,6 +463,7 @@ function initEventListeners() {
   const btnRestart = document.getElementById('btn-restart-game');
   if (btnRestart) {
     btnRestart.addEventListener('click', () => {
+      sessionStorage.removeItem('dnd_player_session');
       window.location.href = '/';
     });
   }

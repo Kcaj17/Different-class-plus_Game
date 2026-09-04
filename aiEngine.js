@@ -7,10 +7,8 @@ require('dotenv').config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODELS = [
-  'gemini-3.7-flash',
   'gemini-2.5-flash',
-  'gemini-flash-latest',
-  'gemini-1.5-flash'
+  'gemini-3.7-flash'
 ];
 
 function isAIEnabled() {
@@ -92,8 +90,11 @@ async function callGeminiWithFallback(userPrompt) {
             }
           ],
           generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 250
+            temperature: 0.7,
+            maxOutputTokens: 800,
+            thinkingConfig: {
+              thinkingBudget: 0
+            }
           }
         })
       });
@@ -103,7 +104,9 @@ async function callGeminiWithFallback(userPrompt) {
       }
 
       const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      const textPart = parts.find(p => p.text && !p.thought);
+      const text = textPart ? textPart.text : (parts[0]?.text || null);
       if (text) return text;
     } catch (err) {
       lastError = err;
