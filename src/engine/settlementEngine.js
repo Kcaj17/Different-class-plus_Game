@@ -3,7 +3,7 @@
 // Handles D20 Dice Checks, Stat Modifiers, and Economic Flow
 // =========================================================
 
-const { ROUNDS_DATA, getModifier } = require('../constants/gameData');
+const { ROUNDS_DATA, THEMATIC_ROUND_ACTIONS, getModifier } = require('../constants/gameData');
 const { calculateLorenzAndGini } = require('./economicsEngine');
 const { secureRandomD20 } = require('../utils/security');
 
@@ -22,79 +22,93 @@ function resolvePlayerDndRoll(room, player, actionId) {
 
   const role = player.roleType;
 
-  // D&D Class Action Definitions
-  if (role === 'capitalist') {
-    if (actionId === 'expand_chain') {
-      relevantStatKey = 'cap';
-      dc = 12;
-      actionName = 'ขยายสาขาห้างค้าปลีก & ระบบดิจิทัล';
-      actionCategory = 'expansion';
-    } else if (actionId === 'etax_supply') {
-      relevantStatKey = 'dig';
-      dc = 11;
-      actionName = 'ลงทุนระบบ e-Tax & เครือข่ายโลจิสติกส์';
-      actionCategory = 'supply_chain';
-    } else {
-      relevantStatKey = 'cap';
-      dc = 10;
-      actionName = 'บริหารพอร์ตลงทุน & ดอกเบี้ยเงินฝาก';
-      actionCategory = 'investment';
-    }
-  } else if (role === 'sme_vendor') {
-    if (actionId === 'copay_boost') {
-      relevantStatKey = 'dig';
-      dc = 10;
-      actionName = 'เปิดรับสแกนแอปถุงเงิน 60/40 ดึงดูดลูกค้า';
-      actionCategory = 'sales';
-    } else if (actionId === 'bank_loan') {
-      relevantStatKey = 'inf';
-      dc = 13;
-      actionName = 'ใช้ Digital Footprint ยื่นกู้สินเชื่อดอกเบี้ยต่ำในระบบ';
-      actionCategory = 'credit';
-    } else {
-      relevantStatKey = 'lab';
-      dc = 11;
-      actionName = 'สต็อกสินค้า & จัดการร้านค้าชุมชน';
-      actionCategory = 'restock';
-    }
-  } else if (role === 'general_citizen') {
-    if (actionId === 'copay_spend_sme') {
-      relevantStatKey = 'dig';
-      dc = 10;
-      actionName = 'ใช้สิทธิไทยช่วยไทย 60/40 อุดหนุนร้านค้าชุมชน';
-      actionCategory = 'copay_sme';
-    } else if (actionId === 'copay_spend_mall') {
-      relevantStatKey = 'dig';
-      dc = 10;
-      actionName = 'ใช้สิทธิ 60/40 สั่งสินค้าผ่านแพลตฟอร์ม/ห้างใหญ่';
-      actionCategory = 'copay_mall';
-    } else if (actionId === 'upgrade_skill') {
-      relevantStatKey = 'lab';
-      dc = 12;
-      actionName = 'เข้าศึกษาอบรมพัฒนาทักษะอาชีพ (Skill Upgrading)';
-      actionCategory = 'skill_up';
-    } else {
-      relevantStatKey = 'lab';
-      dc = 10;
-      actionName = 'ทำงานล่วงเวลาสะสมเงินออม';
-      actionCategory = 'work';
-    }
-  } else if (role === 'vulnerable_group') {
-    if (actionId === 'claim_welfare') {
-      relevantStatKey = 'dig';
-      dc = 9;
-      actionName = 'เบิกรับเงินโอนสวัสดิการแห่งรัฐ 1,000 บาท';
-      actionCategory = 'welfare_direct';
-    } else if (actionId === 'buy_essentials') {
-      relevantStatKey = 'lab';
-      dc = 9;
-      actionName = 'ใช้บัตรสวัสดิการซื้อข้าวสารอาหารแห้งร้านธงฟ้า';
-      actionCategory = 'welfare_shop';
-    } else {
-      relevantStatKey = 'inf';
-      dc = 10;
-      actionName = 'ขอความช่วยเหลือชุมชนก้าวข้าม Digital Divide';
-      actionCategory = 'digital_help';
+  // 1. Dynamic AI / Thematic Round Action Lookup
+  const currentRoundActions = (room.roundActions && room.roundActions[room.round] && room.roundActions[room.round][role])
+    ? room.roundActions[room.round][role]
+    : (THEMATIC_ROUND_ACTIONS[room.round]?.[role] || []);
+
+  const matchedAction = currentRoundActions.find(a => a.id === actionId);
+
+  if (matchedAction) {
+    relevantStatKey = (matchedAction.statKey || 'lab').toLowerCase();
+    dc = matchedAction.dc || 10;
+    actionName = matchedAction.name;
+    actionCategory = matchedAction.actionCategory;
+  } else {
+    // 2. Legacy Static Fallback Definitions
+    if (role === 'capitalist') {
+      if (actionId === 'expand_chain' || actionId.includes('expansion')) {
+        relevantStatKey = 'cap';
+        dc = 12;
+        actionName = 'ขยายสาขาห้างค้าปลีก & ระบบดิจิทัล';
+        actionCategory = 'expansion';
+      } else if (actionId === 'etax_supply' || actionId.includes('supply')) {
+        relevantStatKey = 'dig';
+        dc = 11;
+        actionName = 'ลงทุนระบบ e-Tax & เครือข่ายโลจิสติกส์';
+        actionCategory = 'supply_chain';
+      } else {
+        relevantStatKey = 'cap';
+        dc = 10;
+        actionName = 'บริหารพอร์ตลงทุน & ดอกเบี้ยเงินฝาก';
+        actionCategory = 'investment';
+      }
+    } else if (role === 'sme_vendor') {
+      if (actionId === 'copay_boost' || actionId.includes('sales')) {
+        relevantStatKey = 'dig';
+        dc = 10;
+        actionName = 'เปิดรับสแกนแอปถุงเงิน 60/40 ดึงดูดลูกค้า';
+        actionCategory = 'sales';
+      } else if (actionId === 'bank_loan' || actionId.includes('credit')) {
+        relevantStatKey = 'inf';
+        dc = 13;
+        actionName = 'ใช้ Digital Footprint ยื่นกู้สินเชื่อดอกเบี้ยต่ำในระบบ';
+        actionCategory = 'credit';
+      } else {
+        relevantStatKey = 'lab';
+        dc = 11;
+        actionName = 'สต็อกสินค้า & จัดการร้านค้าชุมชน';
+        actionCategory = 'restock';
+      }
+    } else if (role === 'general_citizen') {
+      if (actionId === 'copay_spend_sme' || actionId.includes('copay_sme')) {
+        relevantStatKey = 'dig';
+        dc = 10;
+        actionName = 'ใช้สิทธิไทยช่วยไทย 60/40 อุดหนุนร้านค้าชุมชน';
+        actionCategory = 'copay_sme';
+      } else if (actionId === 'copay_spend_mall' || actionId.includes('copay_mall')) {
+        relevantStatKey = 'dig';
+        dc = 10;
+        actionName = 'ใช้สิทธิ 60/40 สั่งสินค้าผ่านแพลตฟอร์ม/ห้างใหญ่';
+        actionCategory = 'copay_mall';
+      } else if (actionId === 'upgrade_skill' || actionId.includes('skill')) {
+        relevantStatKey = 'lab';
+        dc = 12;
+        actionName = 'เข้าศึกษาอบรมพัฒนาทักษะอาชีพ (Skill Upgrading)';
+        actionCategory = 'skill_up';
+      } else {
+        relevantStatKey = 'lab';
+        dc = 10;
+        actionName = 'ทำงานล่วงเวลาสะสมเงินออม';
+        actionCategory = 'work';
+      }
+    } else if (role === 'vulnerable_group') {
+      if (actionId === 'claim_welfare' || actionId.includes('welfare_direct')) {
+        relevantStatKey = 'dig';
+        dc = 9;
+        actionName = 'เบิกรับเงินโอนสวัสดิการแห่งรัฐ 1,000 บาท';
+        actionCategory = 'welfare_direct';
+      } else if (actionId === 'buy_essentials' || actionId.includes('welfare_shop')) {
+        relevantStatKey = 'lab';
+        dc = 9;
+        actionName = 'ใช้บัตรสวัสดิการซื้อข้าวสารอาหารแห้งร้านธงฟ้า';
+        actionCategory = 'welfare_shop';
+      } else {
+        relevantStatKey = 'inf';
+        dc = 10;
+        actionName = 'ขอความช่วยเหลือชุมชนก้าวข้าม Digital Divide';
+        actionCategory = 'digital_help';
+      }
     }
   }
 
@@ -122,13 +136,13 @@ function resolvePlayerDndRoll(room, player, actionId) {
 
   // Outcome resolution per action category
   if (isNat20) {
-    outcomeTitle = '🌟 CRITICAL SUCCESS (ทอยได้ 20 สมบูรณ์แบบ!)';
+    outcomeTitle = '🌟 สำเร็จยอดเยี่ยม! (ได้ 20 แต้มเต็ม)';
   } else if (isNat1) {
-    outcomeTitle = '💀 CRITICAL FAILURE (ทอยติด 1 พลาดพลั้งรุนแรง!)';
+    outcomeTitle = '⚠️ เกิดปัญหาติดขัด (ได้ 1 แต้ม มีอุปสรรคเกิดขึ้น)';
   } else if (isSuccess) {
-    outcomeTitle = `✅ SUCCESS (${totalScore} vs DC ${dc})`;
+    outcomeTitle = `✅ ทำได้สำเร็จ (คะแนน ${totalScore} ผ่านเกณฑ์ ${dc})`;
   } else {
-    outcomeTitle = `❌ FAILED (${totalScore} vs DC ${dc})`;
+    outcomeTitle = `❌ ยังไม่ผ่านเกณฑ์ (คะแนน ${totalScore} ต่ำกว่าเกณฑ์ ${dc})`;
   }
 
   // Class specific outcomes
@@ -213,7 +227,7 @@ function resolvePlayerDndRoll(room, player, actionId) {
       } else {
         outcomeDesc = `เงินสดไม่เพียงพอสำหรับซื้อสินค้า`;
       }
-    } else if (actionCategory === 'upgrade_skill') {
+    } else if (actionCategory === 'upgrade_skill' || actionCategory === 'skill_up') {
       const fee = 4000;
       if (player.cash >= fee) {
         player.cash -= fee;
@@ -234,7 +248,7 @@ function resolvePlayerDndRoll(room, player, actionId) {
       outcomeDesc = isSuccess ? `ทำงานได้ผลงานดี ได้ค่าจ้างและเบี้ยขยัน +${goldChange} บาท` : `งานหนักแต่ได้ผลตอบแทนตามปกติ`;
     }
   } else if (role === 'vulnerable_group') {
-    if (actionCategory === 'welfare_direct') {
+    if (actionCategory === 'welfare_direct' || actionCategory === 'digital_help') {
       const grant = isNat20 ? 1500 : 1000;
       goldChange = grant;
       qolChange = isNat20 ? 18 : 12;

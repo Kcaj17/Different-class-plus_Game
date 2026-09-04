@@ -3,13 +3,13 @@
   <div class="lobby-hero">
     <div class="hero-badge">
       <span class="badge-pulse"></span>
-      🎲 แคมเปญ D&D เศรษฐศาสตร์ • 200 ผู้กล้า 20 เขต
+      🎲 เกมจำลองนโยบายเศรษฐกิจ • 200 คน 20 กลุ่ม
     </div>
-    <h2 class="hero-title">กำเนิดใต้ผ้าคลุมแห่งความไม่รู้</h2>
+    <h2 class="hero-title">จำลองสถานการณ์เศรษฐกิจและการกระจายรายได้</h2>
     <p class="hero-desc">
-      สุ่มเกิดเป็น 1 ใน 4 ชนชั้น (นายทุน, ร้านค้าชุมชน, แรงงาน, หรือกลุ่มเปราะบาง) 
-      ทอยเต๋า D20 ตัดสินนโยบาย <strong>ไทยช่วยไทย พลัส 60/40</strong>, ภาษี VAT 7%, และ Virtual Bank 
-      โดยมี <strong>AI Dungeon Master</strong> พากย์บรรยายชะตากรรมของคุณ!
+      สุ่มรับบทบาท 1 ใน 4 กลุ่มอาชีพ (เจ้าของธุรกิจ/นายทุน, ร้านค้าชุมชน, พนักงาน/แรงงานทั่วไป, หรือกลุ่มเปราะบาง) 
+      ร่วมตัดสินใจในนโยบาย <strong>คนละชั้น พลัส 60/40</strong>, ภาษี VAT 7%, และธนาคารไร้สาขา 
+      พร้อมระบบ <strong>AI ช่วยประเมินผล</strong> สรุปผลกระทบทางเศรษฐกิจของตัวคุณ!
     </p>
   </div>
 
@@ -17,33 +17,33 @@
   <div class="player-portal-container">
     <div class="glass-card player-portal-card highlight-glow">
       <div class="portal-header">
-        <span class="portal-icon">🛡️</span>
+        <span class="portal-icon">👤</span>
         <div>
-          <h3>สร้างตัวละคร & เข้าร่วมการผจญภัย</h3>
-          <small class="text-secondary">ระบบจะสุ่มบทบาทตามหลัก Veil of Ignorance ของ John Rawls</small>
+          <h3>กรอกชื่อผู้เล่น & เข้าสู่เกม</h3>
+          <small class="text-secondary">ระบบจะสุ่มบทบาทอาชีพและสถานะเริ่มต้นให้โดยอัตโนมัติ</small>
         </div>
       </div>
       
       <div class="join-form">
         <div class="input-group">
-          <label for="input-player-name">ชื่อผู้กล้าของคุณ</label>
+          <label for="input-player-name">ชื่อของคุณ</label>
           <div class="input-with-icon">
-            <input type="text" id="input-player-name" placeholder="เช่น ผู้กล้าสมชาย หรือ เจ๊พร" maxlength="24" autocomplete="off">
+            <input type="text" id="input-player-name" placeholder="เช่น สมชาย หรือ เจ๊พร" maxlength="24" autocomplete="off">
           </div>
         </div>
         
         <button id="btn-quick-join-master" class="btn-primary btn-large portal-btn">
-          <span>⚡ สุ่มบทบาท & เริ่มผจญภัยทันที ➔</span>
+          <span>⚡ สุ่มบทบาท & เข้าเล่นเกมทันที ➔</span>
         </button>
 
         <div class="custom-district-toggle">
           <button type="button" id="btn-toggle-custom-district" class="btn-link">
-            <span>⚙️ ระบุรหัสเขตด้วยตนเอง (ถ้ามี)</span>
+            <span>⚙️ ระบุรหัสกลุ่มด้วยตนเอง (ถ้ามี)</span>
           </button>
           <div id="custom-district-input-box" class="custom-district-box hidden">
             <div class="input-inline" style="margin-top: 8px;">
               <input type="text" id="input-room-code" placeholder="เช่น DIST-01" maxlength="8" autocapitalize="characters">
-              <button id="btn-join-room" class="btn-secondary">เข้าเขตนี้</button>
+              <button id="btn-join-room" class="btn-secondary">เข้าร่วมกลุ่มนี้</button>
             </div>
           </div>
         </div>
@@ -54,7 +54,7 @@
   <!-- Discreet Admin Footer Link for Projector / Host -->
   <footer class="lobby-footer">
     <a href="/?view=master" id="link-admin-master" class="admin-link">
-      <span>⚙️ สำหรับผู้ดำเนินรายการ: เปิดจอใหญ่กลาง (Master Screen)</span>
+      <span>⚙️ สำหรับผู้ดำเนินรายการ: เปิดหน้าจอรวม (Master Screen)</span>
     </a>
   </footer>
 </section>

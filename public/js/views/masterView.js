@@ -102,7 +102,7 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
               <span class="district-num">#${d.districtIndex}</span>
               <strong>${d.name}</strong>
             </div>
-            <span class="round-pill">ไตรมาส ${d.round}/${d.maxRounds}</span>
+            <span class="round-pill">รอบ ${d.round}/${d.maxRounds}</span>
           </div>
 
           <div class="district-stats-row">
@@ -119,8 +119,8 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
               <strong class="stat-val" style="color: ${debtColor};">${d.debtToGdp}%</strong>
             </div>
             <div class="stat-box">
-              <span class="stat-label">HP รวม</span>
-              <strong class="stat-val text-qol">${d.avgQol}</strong>
+              <span class="stat-label">สุขภาวะเฉลี่ย</span>
+              <strong class="stat-val text-qol">${d.avgQol}%</strong>
             </div>
           </div>
 
@@ -128,7 +128,7 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
 
           <div class="district-card-footer">
             <button class="btn-inspect-district" onclick="window.inspectDistrict('${d.code}')">
-              <span>🔍 ส่องเขตนี้</span>
+              <span>🔍 ดูรายละเอียดกลุ่มนี้</span>
             </button>
           </div>
         </div>
@@ -146,7 +146,7 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
     elEqual.textContent = `${leader.mostEqualDistrict.name} (Gini ${leader.mostEqualDistrict.gini.toFixed(3)})`;
   }
   if (elHappy && leader.highestHappinessDistrict) {
-    elHappy.textContent = `${leader.highestHappinessDistrict.name} (HP ${leader.highestHappinessDistrict.avgQol})`;
+    elHappy.textContent = `${leader.highestHappinessDistrict.name} (สุขภาวะเฉลี่ย ${leader.highestHappinessDistrict.avgQol}%)`;
   }
   if (elDebt && leader.fiscallyPrudentDistrict) {
     elDebt.textContent = `${leader.fiscallyPrudentDistrict.name} (${leader.fiscallyPrudentDistrict.debtToGdp}%)`;
@@ -187,7 +187,7 @@ export function openDistrictInspector(data) {
   const roundInfo = data.roundInfo || {};
 
   document.getElementById('inspector-district-title').textContent = `${room.districtName} (${room.code})`;
-  document.getElementById('inspector-round-subtitle').textContent = `ไตรมาสที่ ${room.round} / ${room.maxRounds} • ${roundInfo.chapterName || ''}`;
+  document.getElementById('inspector-round-subtitle').textContent = `รอบที่ ${room.round} / ${room.maxRounds} • ${roundInfo.chapterName || ''}`;
 
   // Macro metrics
   document.getElementById('inspector-gini').textContent = room.macroStats.gini.toFixed(3);
@@ -212,12 +212,12 @@ export function openDistrictInspector(data) {
           </div>
         </div>
         <div class="player-stats-mini">
-          <span>HP: <strong>${p.qol}</strong></span>
+          <span>สุขภาวะ: <strong>${p.qol}%</strong></span>
           <span>เงิน: <strong>${Math.round(p.cash).toLocaleString()} บ.</strong></span>
           <span>หนี้: <strong>${Math.round(p.debt).toLocaleString()} บ.</strong></span>
         </div>
         <div class="player-last-action">
-          ${p.lastActionDesc ? `🎲 <em>${p.lastActionDesc}</em>` : '<span class="text-muted">กำลังเตรียมทอยเต๋า...</span>'}
+          ${p.lastActionDesc ? `🎲 <em>${p.lastActionDesc}</em>` : '<span class="text-muted">กำลังเตรียมตัดสินใจและทอยเต๋า...</span>'}
         </div>
       </div>
     `).join('');

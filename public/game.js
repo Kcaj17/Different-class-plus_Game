@@ -132,7 +132,7 @@ function initEventListeners() {
       const playerName = (nameInput ? nameInput.value : '').trim();
 
       btnQuickJoin.disabled = true;
-      btnQuickJoin.innerHTML = '<span>⏳ กำลังสุ่มเขตและเปิดม่านหมอก...</span>';
+      btnQuickJoin.innerHTML = '<span>⏳ กำลังจัดสรรกลุ่มและบทบาท...</span>';
 
       if (socket) {
         socket.emit('player:quick_join_master', {
@@ -142,7 +142,7 @@ function initEventListeners() {
 
       setTimeout(() => {
         btnQuickJoin.disabled = false;
-        btnQuickJoin.innerHTML = '<span>⚡ สุ่มบทบาท & เริ่มผจญภัยทันที ➔</span>';
+        btnQuickJoin.innerHTML = '<span>⚡ สุ่มบทบาท & เข้าเล่นเกมทันที ➔</span>';
       }, 3500);
     });
   }
@@ -234,7 +234,7 @@ function initEventListeners() {
       }
       setTimeout(() => {
         btnAdvanceRound.disabled = false;
-        btnAdvanceRound.innerHTML = '<span>🚩 เดินทางสู่ไตรมาสถัดไป ➔</span>';
+        btnAdvanceRound.innerHTML = '<span>🚩 ไปยังรอบถัดไป ➔</span>';
       }, 1500);
     });
   }
@@ -246,7 +246,7 @@ function initEventListeners() {
       playSound('click');
       if (socket) {
         socket.emit('district:fill_bots');
-        showToast('เติมบอทนักผจญภัยครบ 10 คนแล้ว!', 'success');
+        showToast('เติมผู้เล่นจำลอง (บอท) ครบ 10 คนแล้ว!', 'success');
       }
     });
   }
@@ -421,7 +421,7 @@ function initEventListeners() {
       playSound('fanfare');
       if (socket) {
         socket.emit('master:start_game');
-        showToast('🚀 เริ่มเกมและจัดสรรบอท 🤖 ครบทุกเขตแล้ว!', 'success');
+        showToast('🚀 เริ่มเกมและจัดสรรผู้เล่นจำลอง (บอท) ครบทุกกลุ่มแล้ว!', 'success');
       }
     });
   }
@@ -437,8 +437,8 @@ function initEventListeners() {
       }
       setTimeout(() => {
         btnMasterSettleAll.disabled = false;
-        btnMasterSettleAll.innerHTML = '<span>⚙️ Settle ทุกเขตพร้อมกัน (Global Settle)</span>';
-        showToast('⚙️ ประมวลผลเศรษฐกิจและค่า Gini ทุกเขตสำเร็จ!', 'success');
+        btnMasterSettleAll.innerHTML = '<span>⚙️ สรุปยอดและประมวลผลทุกกลุ่ม (Global Settle)</span>';
+        showToast('⚙️ ประมวลผลเศรษฐกิจและค่า Gini ทุกกลุ่มสำเร็จ!', 'success');
       }, 1200);
     });
   }
@@ -448,13 +448,13 @@ function initEventListeners() {
     btnMasterAdvanceAll.addEventListener('click', () => {
       playSound('fanfare');
       btnMasterAdvanceAll.disabled = true;
-      btnMasterAdvanceAll.innerHTML = '<span>⏳ กำลังเข้าสู่ไตรมาสใหม่...</span>';
+      btnMasterAdvanceAll.innerHTML = '<span>⏳ กำลังเข้าสู่รอบใหม่...</span>';
       if (socket) {
         socket.emit('master:advance_all');
       }
       setTimeout(() => {
         btnMasterAdvanceAll.disabled = false;
-        btnMasterAdvanceAll.innerHTML = '<span>⏭️ เริ่มไตรมาสถัดไปพร้อมกัน (Next Quarter All)</span>';
+        btnMasterAdvanceAll.innerHTML = '<span>⏭️ เริ่มรอบถัดไปพร้อมกันทั้งหมด (Next Round)</span>';
       }, 1200);
     });
   }

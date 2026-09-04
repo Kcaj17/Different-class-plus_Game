@@ -1,0 +1,19 @@
+services:
+  game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: inequality-tycoon:latest
+    container_name: inequality-game
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3005}:${PORT:-3005}"
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT:-3005}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ADMIN_PIN=${ADMIN_PIN:-2026}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+    env_file:
+      - path: .env
+        required: false

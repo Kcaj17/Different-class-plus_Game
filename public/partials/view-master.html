@@ -1,12 +1,12 @@
-<!-- ================= 2. MASTER SCREEN (National Command Center) ================= -->
+<!-- ================= 2. MASTER SCREEN (National Dashboard) ================= -->
 <section id="view-master" class="hidden-view">
   <div class="master-header glass-card">
     <div class="master-brand">
       <div class="live-indicator">
         <span class="pulse-dot"></span>
-        <strong>LIVE COMMAND CENTER: 20 เขตเศรษฐกิจทั่วประเทศ</strong>
+        <strong>LIVE DASHBOARD: 20 กลุ่มเศรษฐกิจทั่วประเทศ</strong>
       </div>
-      <h2 class="master-title">มหาแดชบอร์ดจำลองนโยบายเศรษฐกิจ & วินัยการคลัง</h2>
+      <h2 class="master-title">แดชบอร์ดภาพรวมจำลองนโยบายเศรษฐกิจ & วินัยการคลัง</h2>
       <div class="master-join-bar">
         <span class="join-tag">📲 สแกน QR หรือพิมพ์รหัสเข้าเล่น:</span>
         <strong class="join-code">ECO-200</strong>
@@ -17,13 +17,13 @@
           <span id="master-auth-label">🔒 ยืนยันรหัส Admin PIN</span>
         </button>
         <button id="btn-master-start" class="btn-primary" style="padding: 8px 16px; font-weight: bold;" disabled>
-          <span>🚀 เริ่มเกม & เติมบอทอัตโนมัติ (Start & Fill Bots 🤖)</span>
+          <span>🚀 เริ่มเกม & เติมบอทให้ครบ (Start Game)</span>
         </button>
         <button id="btn-master-global-settle" class="btn-warning" style="padding: 8px 16px; font-weight: bold;" disabled>
-          <span>⚙️ Settle ทุกเขตพร้อมกัน (Global Settle)</span>
+          <span>⚙️ ประมวลผลทุกกลุ่มพร้อมกัน (Global Settle)</span>
         </button>
         <button id="btn-master-advance-all" class="btn-success" style="padding: 8px 16px; font-weight: bold;" disabled>
-          <span>⏭️ เริ่มไตรมาสถัดไปพร้อมกัน (Next Quarter All)</span>
+          <span>⏭️ เริ่มรอบถัดไปพร้อมกัน (Next Round All)</span>
         </button>
       </div>
     </div>
@@ -56,16 +56,16 @@
       <small>เพดานวินัยการคลัง 70%</small>
     </div>
     <div class="kpi-box">
-      <span class="kpi-label">GDP รวมทุกเขต</span>
+      <span class="kpi-label">GDP รวมทุกกลุ่ม</span>
       <strong class="kpi-val text-success" id="master-total-gdp">20,000,000 บ.</strong>
     </div>
     <div class="kpi-box">
-      <span class="kpi-label">ภาษี VAT 7% ดึงคืนคลัง</span>
+      <span class="kpi-label">ภาษี VAT 7% คืนคลัง</span>
       <strong class="kpi-val text-primary" id="master-total-vat">0 บ.</strong>
     </div>
     <div class="kpi-box">
-      <span class="kpi-label">สถานะเขตปลอดภัย</span>
-      <strong class="kpi-val" id="master-safe-districts">20 / 20 เขต</strong>
+      <span class="kpi-label">สถานะกลุ่มปลอดภัย</span>
+      <strong class="kpi-val" id="master-safe-districts">20 / 20 กลุ่ม</strong>
     </div>
   </div>
 
@@ -74,12 +74,12 @@
     <div class="glass-card ticker-panel">
       <div class="panel-header">
         <span class="panel-icon">⚡</span>
-        <h4>Live D20 Roll & News Ticker (เหตุการณ์สด)</h4>
+        <h4>รายงานเหตุการณ์สดในเกม (Live Ticker)</h4>
       </div>
       <div id="master-live-ticker-list" class="ticker-stream">
         <div class="ticker-item ticker-normal">
           <span class="ticker-time">เริ่มระบบ</span>
-          <span class="ticker-msg">⚔️ ยินดีต้อนรับสู่ D&D Economic Chronicles! 20 เขตเศรษฐกิจพร้อมเปิดรับผู้กล้า 200 คน</span>
+          <span class="ticker-msg">📢 เริ่มต้นระบบ: พร้อมเปิดรับผู้เล่น 20 กลุ่ม รวม 200 คน</span>
         </div>
       </div>
     </div>
@@ -87,24 +87,24 @@
     <div class="glass-card philosophy-panel">
       <div class="panel-header">
         <span class="panel-icon">🏆</span>
-        <h4>เกียรติยศ 3 มหาปรัชญาเศรษฐกิจ (Philosophy Leaderboard)</h4>
+        <h4>การประเมิน 3 แนวคิดเศรษฐกิจ (Philosophy Summary)</h4>
       </div>
       <div class="philosophy-grid">
         <div class="phil-card">
           <span class="phil-tag">🌟 ประโยชน์นิยม (Utilitarianism)</span>
-          <strong>เขตสุขภาวะเฉลี่ยสูงสุด:</strong>
+          <strong>กลุ่มที่มีคุณภาพชีวิตเฉลี่ยสูงสุด:</strong>
           <span id="lb-happy-district" class="phil-winner">-</span>
-          <small>เน้นความสุขและอรรถประโยชน์รวมสูงสุดของสังคม</small>
+          <small>เน้นความสุขและประโยชน์รวมสูงสุดของสังคม</small>
         </div>
         <div class="phil-card">
           <span class="phil-tag">⚖️ ยุติธรรมของ Rawls (Rawlsianism)</span>
-          <strong>เขตที่เท่าเทียมที่สุด (Lowest Gini):</strong>
+          <strong>กลุ่มที่มีความเหลื่อมล้ำต่ำสุด (Lowest Gini):</strong>
           <span id="lb-equal-district" class="phil-winner">-</span>
-          <small>เน้นยกระดับผู้ที่เสียเปรียบและยากจนที่สุดในสังคม</small>
+          <small>เน้นยกระดับผู้ที่มีรายได้น้อยที่สุดในสังคม</small>
         </div>
         <div class="phil-card">
           <span class="phil-tag">🚀 ความเสมอภาคทางโอกาส (Opportunity)</span>
-          <strong>เขตวินัยการคลังยอดเยี่ยม:</strong>
+          <strong>กลุ่มที่รักษาวินัยการคลังยอดเยี่ยม:</strong>
           <span id="lb-prudent-district" class="phil-winner">-</span>
           <small>สร้างโอกาสเข้าถึงสินเชื่อและการศึกษาอย่างทั่วถึง</small>
         </div>

@@ -8,7 +8,7 @@ export function renderProjectorView(room, roundData) {
   // Macro Bar
   const roundIndicator = document.getElementById('proj-round-indicator');
   if (roundIndicator) {
-    roundIndicator.textContent = `ไตรมาส ${room.round} / ${room.maxRounds}`;
+    roundIndicator.textContent = `รอบที่ ${room.round} / ${room.maxRounds}`;
   }
 
   const gdpEl = document.getElementById('proj-gdp');
@@ -59,7 +59,7 @@ export function renderProjectorView(room, roundData) {
 
   // Policy Flash
   const badgeEl = document.getElementById('proj-policy-badge');
-  if (badgeEl) badgeEl.textContent = `📢 นโยบายไตรมาสที่ ${room.round}: ${roundData.policyName || ''}`;
+  if (badgeEl) badgeEl.textContent = `📢 นโยบายรอบที่ ${room.round}: ${roundData.policyName || ''}`;
 
   const titleEl = document.getElementById('proj-policy-title');
   if (titleEl) titleEl.textContent = roundData.title;

@@ -70,7 +70,7 @@ export function showCharacterReveal(player, room, onConfirmCallback) {
   if (inf) inf.textContent = stats.inf;
   if (dig) dig.textContent = stats.dig;
   if (gold) gold.textContent = `${Math.round(player.cash).toLocaleString()} บ.`;
-  if (hp) hp.textContent = `${player.qol || 50} HP`;
+  if (hp) hp.textContent = `${player.qol || 50}% สุขภาวะ`;
 
   // Show modal and start with front rune face
   flipCard.classList.remove('flipped');
@@ -96,7 +96,7 @@ export function showCharacterReveal(player, room, onConfirmCallback) {
 }
 
 // Render Main Player Screen
-export function renderPlayerView(player, room, roundData) {
+export function renderPlayerView(player, room, roundData, roundActions) {
   if (!player || !room) return;
 
   // 1. Character Identity & D&D Class in Top HUD
@@ -163,17 +163,17 @@ export function renderPlayerView(player, room, roundData) {
   const chapterLore = document.getElementById('pl-chapter-lore');
   const chapterNews = document.getElementById('pl-chapter-news');
 
-  if (roundTitle) roundTitle.textContent = `ไตรมาสที่ ${room.round} / ${room.maxRounds}`;
-  if (chapterName) chapterName.textContent = chapter.chapterName || `ไตรมาสที่ ${room.round}`;
+  if (roundTitle) roundTitle.textContent = `รอบที่ ${room.round} / ${room.maxRounds}`;
+  if (chapterName) chapterName.textContent = chapter.chapterName || `รอบที่ ${room.round}`;
   if (chapterLore) chapterLore.textContent = chapter.lore || chapter.description || '';
   if (chapterNews) chapterNews.textContent = `📢 ${chapter.newsAlert || ''}`;
 
   // 5. Render Class Action Choices (Stage 2)
-  renderClassActionChoices(player, room, chapter);
+  renderClassActionChoices(player, room, chapter, roundActions);
 
-  // 6. Restore AI Lore if any
+  // 6. Restore AI Lore if any (instant render, no typewriter animation)
   if (player.lastAiLore) {
-    renderAiGmLoreBox(player.lastAiLore);
+    renderAiGmLoreBox(player.lastAiLore, false);
   }
 
   // 7. Sync roll state for this round
@@ -187,7 +187,7 @@ export function renderPlayerView(player, room, roundData) {
   if (player.hasRolledThisRound) {
     if (btnRoll) {
       btnRoll.disabled = true;
-      btnRoll.innerHTML = `<span>✅ ดำเนินการในไตรมาสนี้แล้ว</span>`;
+      btnRoll.innerHTML = `<span>✅ ดำเนินการในรอบนี้แล้ว</span>`;
     }
     if (preRollBox) preRollBox.classList.add('hidden');
     if (postRollBox) postRollBox.classList.remove('hidden');
@@ -200,7 +200,7 @@ export function renderPlayerView(player, room, roundData) {
   } else {
     if (btnRoll) {
       btnRoll.disabled = false;
-      btnRoll.innerHTML = `<span>🎲 กดสุ่มชะตากรรม D20 ➔</span>`;
+      btnRoll.innerHTML = `<span>🎲 กดทอยลูกเต๋าตัดสินผล ➔</span>`;
     }
     if (preRollBox) preRollBox.classList.remove('hidden');
     if (postRollBox) postRollBox.classList.add('hidden');
@@ -252,14 +252,14 @@ export function updatePostRollWaitingState(room, player) {
   if (isAllRolled) {
     if (iconEl) iconEl.textContent = '🎉';
     if (titleEl) {
-      titleEl.textContent = `สมาชิกในเขตทอยครบทุกคนแล้ว (${rolledCount}/${totalPlayers} คน)!`;
+      titleEl.textContent = `สมาชิกในกลุ่มทอยครบทุกคนแล้ว (${rolledCount}/${totalPlayers} คน)!`;
       titleEl.style.color = '#34d399';
     }
     if (hintEl) {
       hintEl.innerHTML = `
-        <span style="color: #34d399; font-weight: 600;">✅ สมาชิกในเขตของคุณดำเนินการครบ 100% แล้ว</span><br>
+        <span style="color: #34d399; font-weight: 600;">✅ สมาชิกในกลุ่มของคุณดำเนินการครบ 100% แล้ว</span><br>
         <span style="color: #cbd5e1; font-size: 0.85rem; margin-top: 4px; display: inline-block;">
-          กำลังรอผู้ดำเนินรายการ (Master) สรุปผลตัวชี้วัดเศรษฐกิจ และเปิดไตรมาสถัดไป... หรือคลิกปุ่มด้านล่างเพื่อเปิดไตรมาสถัดไปทันที
+          กำลังรอผู้ดูแลระบบสรุปผลเศรษฐกิจ และเปิดรอบถัดไป... หรือคลิกปุ่มด้านล่างเพื่อไปยังรอบถัดไปได้ทันที
         </span>
       `;
     }
@@ -273,11 +273,11 @@ export function updatePostRollWaitingState(room, player) {
   } else {
     if (iconEl) iconEl.textContent = '⏳';
     if (titleEl) {
-      titleEl.textContent = 'คุณดำเนินการในไตรมาสนี้เรียบร้อยแล้ว!';
+      titleEl.textContent = 'คุณบันทึกการตัดสินใจในรอบนี้เรียบร้อยแล้ว!';
       titleEl.style.color = '#38bdf8';
     }
     if (hintEl) {
-      hintEl.textContent = `กำลังรอเพื่อนร่วมเขตอีก ${remaining} คนดำเนินการวางแผนและทอยเต๋า... (ทอยแล้ว ${rolledCount}/${totalPlayers} คน)`;
+      hintEl.textContent = `กำลังรอเพื่อนร่วมกลุ่มอีก ${remaining} คนวางแผนและทอยลูกเต๋า... (ทอยแล้ว ${rolledCount}/${totalPlayers} คน)`;
     }
     postRollBox.style.borderColor = 'rgba(56, 189, 248, 0.35)';
     postRollBox.style.background = 'rgba(56, 189, 248, 0.08)';
@@ -292,11 +292,11 @@ export function updatePostRollWaitingState(room, player) {
   const btnParty = document.getElementById('btn-open-party-roster');
   if (btnParty) {
     if (isAllRolled) {
-      btnParty.innerHTML = `<span>👥 ปาร์ตี้ (${rolledCount}/${totalPlayers}) ✓</span>`;
+      btnParty.innerHTML = `<span>👥 สมาชิกในกลุ่ม (${rolledCount}/${totalPlayers}) ✓</span>`;
       btnParty.style.borderColor = 'rgba(16, 185, 129, 0.6)';
       btnParty.style.color = '#34d399';
     } else {
-      btnParty.innerHTML = `<span>👥 ปาร์ตี้ (${rolledCount}/${totalPlayers})</span>`;
+      btnParty.innerHTML = `<span>👥 สมาชิกในกลุ่ม (${rolledCount}/${totalPlayers})</span>`;
       btnParty.style.borderColor = '';
       btnParty.style.color = '';
     }
@@ -353,7 +353,7 @@ function renderWaitingRoom(room, player) {
     btnStartWithBots.onclick = () => {
       playSound('fanfare');
       btnStartWithBots.disabled = true;
-      btnStartWithBots.innerHTML = '<span>⏳ กำลังระดมพลบอทเข้าประจำการ...</span>';
+      btnStartWithBots.innerHTML = '<span>⏳ กำลังเพิ่มผู้เล่นจำลองเข้าสู่ระบบ...</span>';
       if (socket) {
         socket.emit('district:start_with_bots');
       }
@@ -374,129 +374,138 @@ function renderAttribute(elementId, value, label) {
   `;
 }
 
-// Render Actions based on Role & Chapter
-function renderClassActionChoices(player, room, chapter) {
+// Render Actions based on Role & Chapter (Dynamic per round or thematic fallback)
+function renderClassActionChoices(player, room, chapter, roundActions) {
   const container = document.getElementById('pl-action-choices-container');
   if (!container) return;
 
   const role = player.roleType;
-  let actions = [];
+  const actionsMap = roundActions || state.currentRoundActions || room?.currentRoundActions || (room?.roundActions && room.roundActions[room.round]);
+  let actions = (actionsMap && actionsMap[role]) ? actionsMap[role] : null;
 
-  if (role === 'capitalist') {
-    actions = [
-      {
-        id: 'expand_chain',
-        icon: '🏗️',
-        name: 'ขยายสาขาห้างค้าปลีก & ระบบดิจิทัล',
-        desc: 'ใช้ทุน 40,000 บาท ขยายสาขา เพิ่มรายได้ประจำถาวร +12,000 บ./รอบ (DC 12: ตรวจสอบ CAP)',
-        dc: 12,
-        statKey: 'CAP'
-      },
-      {
-        id: 'etax_supply',
-        icon: '🧾',
-        name: 'ดึงร้านค้าเข้าห่วงโซ่ e-Tax Invoice',
-        desc: 'ลงทุนระบบซัพพลายเออร์ดิจิทัล ลดหย่อนภาษี และรับเงินปันผลจากยอดขายร้านค้า (DC 10: ตรวจสอบ DIG)',
-        dc: 10,
-        statKey: 'DIG'
-      },
-      {
-        id: 'investment',
-        icon: '💼',
-        name: 'ถือครองพันธบัตรและสินทรัพย์สภาพคล่อง',
-        desc: 'รับดอกเบี้ยปลอดภัย 5% และรักษาเกราะป้องกันวิกฤตเงินเฟ้อ (DC 8: ตรวจสอบ INF)',
-        dc: 8,
-        statKey: 'INF'
-      }
-    ];
-  } else if (role === 'sme_vendor') {
-    actions = [
-      {
-        id: 'copay_boost',
-        icon: '🛍️',
-        name: 'จัดโปรโมชัน 60/40 ดึงดูดลูกค้าชุมชน',
-        desc: 'เข้าร่วมโครงการไทยช่วยไทย พลัส 60/40 รับเงินอุดหนุนรัฐ ยอดขายพุ่ง 2 เท่า (DC 10: ตรวจสอบ LAB)',
-        dc: 10,
-        statKey: 'LAB'
-      },
-      {
-        id: 'bank_loan',
-        icon: '🏦',
-        name: 'ยื่นกู้ Virtual Bank ดอกเบี้ยต่ำขยายร้าน',
-        desc: 'ใช้รอยเท้าดิจิทัลกู้เงิน 30,000 บ. ดอกเบี้ย 3% มาสต็อกสินค้ากำไรสูง (DC 11: ตรวจสอบ DIG)',
-        dc: 11,
-        statKey: 'DIG'
-      },
-      {
-        id: 'restock',
-        icon: '📦',
-        name: 'ซื้อสินค้าสต็อกราคาส่ง ตรึงราคาขาย',
-        desc: 'บริหารจัดการสต็อก ป้องกันความเสี่ยงเงินเฟ้อและต้นทุนพลังงาน (DC 9: ตรวจสอบ CAP)',
-        dc: 9,
-        statKey: 'CAP'
-      }
-    ];
-  } else if (role === 'general_citizen') {
-    actions = [
-      {
-        id: 'copay_spend_sme',
-        icon: '🛒',
-        name: 'ใช้สิทธิ์ 60/40 ซื้อของร้านค้าชุมชน',
-        desc: 'จ่ายเอง 40% รัฐออกให้ 60% ประหยัดเงิน และได้ของมูลค่า 3,000 บาท! (DC 8: ตรวจสอบ INF)',
-        dc: 8,
-        statKey: 'INF'
-      },
-      {
-        id: 'upgrade_skill',
-        icon: '📚',
-        name: 'ลงทะเบียน Upskill สถาบันพัฒนาทักษะ',
-        desc: 'ใช้เงิน 4,000 บาท เข้าคอร์สอัปเกรดวิชาชีพ เลื่อนขั้นเงินเดือนถาวร +25% (DC 12: ตรวจสอบ LAB)',
-        dc: 12,
-        statKey: 'LAB'
-      },
-      {
-        id: 'copay_spend_mall',
-        icon: '🏢',
-        name: 'ซื้อสินค้าอุปโภคบริโภคในห้างค้าปลีก',
-        desc: 'ช้อปปิ้งห้างใหญ่ สินค้าครบครัน แต่เงินไหลเข้ามหาเศรษฐีเจ้าของทุน (DC 7: ตรวจสอบ CAP)',
-        dc: 7,
-        statKey: 'CAP'
-      }
-    ];
-  } else {
-    // vulnerable_group
-    actions = [
-      {
-        id: 'claim_welfare',
-        icon: '💳',
-        name: 'รูดบัตรสวัสดิการแห่งรัฐซื้อสินค้าจำเป็น',
-        desc: 'รับสิทธิ์สวัสดิการข้าวสารอาหารแห้งมูลค่า 1,000 บาทฟรี! เพิ่มพลังชีวิต QoL (DC 6: ตรวจสอบ INF)',
-        dc: 6,
-        statKey: 'INF'
-      },
-      {
-        id: 'buy_essentials',
-        icon: '🍚',
-        name: 'เข้าร่วมกองทุนชุมชนช่วยเหลือน้ำ-ไฟ',
-        desc: 'ขอรับการลดหย่อนค่าสาธารณูปโภคบรรเทาพิษเงินเฟ้อ (DC 8: ตรวจสอบ LAB)',
-        dc: 8,
-        statKey: 'LAB'
-      },
-      {
-        id: 'digital_help',
-        icon: '📱',
-        name: 'ขอความช่วยเหลือชุมชนก้าวข้าม Digital Divide',
-        desc: 'ขอให้อาสาสมัครลงทะเบียนยืนยันตัวตนดิจิทัลเพื่อรับสิทธิ์เงินอุดหนุนรัฐ (DC 9: ตรวจสอบ DIG)',
-        dc: 9,
-        statKey: 'DIG'
-      }
-    ];
+  if (!actions || actions.length === 0) {
+    if (role === 'capitalist') {
+      actions = [
+        {
+          id: 'expand_chain',
+          icon: '🏗️',
+          name: 'ขยายสาขาห้างค้าปลีก & ระบบดิจิทัล',
+          desc: 'ใช้ทุน 40,000 บาท ขยายสาขา เพิ่มรายได้ประจำถาวร +12,000 บ./รอบ (DC 12: ตรวจสอบ CAP)',
+          dc: 12,
+          statKey: 'CAP'
+        },
+        {
+          id: 'etax_supply',
+          icon: '🧾',
+          name: 'ดึงร้านค้าเข้าห่วงโซ่ e-Tax Invoice',
+          desc: 'ลงทุนระบบซัพพลายเออร์ดิจิทัล ลดหย่อนภาษี และรับเงินปันผลจากยอดขายร้านค้า (DC 10: ตรวจสอบ DIG)',
+          dc: 10,
+          statKey: 'DIG'
+        },
+        {
+          id: 'investment',
+          icon: '💼',
+          name: 'ถือครองพันธบัตรและสินทรัพย์สภาพคล่อง',
+          desc: 'รับดอกเบี้ยปลอดภัย 5% และรักษาเกราะป้องกันวิกฤตเงินเฟ้อ (DC 8: ตรวจสอบ INF)',
+          dc: 8,
+          statKey: 'INF'
+        }
+      ];
+    } else if (role === 'sme_vendor') {
+      actions = [
+        {
+          id: 'copay_boost',
+          icon: '🛍️',
+          name: 'จัดโปรโมชัน 60/40 ดึงดูดลูกค้าชุมชน',
+          desc: 'เข้าร่วมโครงการไทยช่วยไทย พลัส 60/40 รับเงินอุดหนุนรัฐ ยอดขายพุ่ง 2 เท่า (DC 10: ตรวจสอบ LAB)',
+          dc: 10,
+          statKey: 'LAB'
+        },
+        {
+          id: 'bank_loan',
+          icon: '🏦',
+          name: 'ยื่นกู้ Virtual Bank ดอกเบี้ยต่ำขยายร้าน',
+          desc: 'ใช้รอยเท้าดิจิทัลกู้เงิน 30,000 บ. ดอกเบี้ย 3% มาสต็อกสินค้ากำไรสูง (DC 11: ตรวจสอบ DIG)',
+          dc: 11,
+          statKey: 'DIG'
+        },
+        {
+          id: 'restock',
+          icon: '📦',
+          name: 'ซื้อสินค้าสต็อกราคาส่ง ตรึงราคาขาย',
+          desc: 'บริหารจัดการสต็อก ป้องกันความเสี่ยงเงินเฟ้อและต้นทุนพลังงาน (DC 9: ตรวจสอบ CAP)',
+          dc: 9,
+          statKey: 'CAP'
+        }
+      ];
+    } else if (role === 'general_citizen') {
+      actions = [
+        {
+          id: 'copay_spend_sme',
+          icon: '🛒',
+          name: 'ใช้สิทธิ์ 60/40 ซื้อของร้านค้าชุมชน',
+          desc: 'จ่ายเอง 40% รัฐออกให้ 60% ประหยัดเงิน และได้ของมูลค่า 3,000 บาท! (DC 8: ตรวจสอบ INF)',
+          dc: 8,
+          statKey: 'INF'
+        },
+        {
+          id: 'upgrade_skill',
+          icon: '📚',
+          name: 'ลงทะเบียน Upskill สถาบันพัฒนาทักษะ',
+          desc: 'ใช้เงิน 4,000 บาท เข้าคอร์สอัปเกรดวิชาชีพ เลื่อนขั้นเงินเดือนถาวร +25% (DC 12: ตรวจสอบ LAB)',
+          dc: 12,
+          statKey: 'LAB'
+        },
+        {
+          id: 'copay_spend_mall',
+          icon: '🏢',
+          name: 'ซื้อสินค้าอุปโภคบริโภคในห้างค้าปลีก',
+          desc: 'ช้อปปิ้งห้างใหญ่ สินค้าครบครัน แต่เงินไหลเข้ามหาเศรษฐีเจ้าของทุน (DC 7: ตรวจสอบ CAP)',
+          dc: 7,
+          statKey: 'CAP'
+        }
+      ];
+    } else {
+      // vulnerable_group
+      actions = [
+        {
+          id: 'claim_welfare',
+          icon: '💳',
+          name: 'รูดบัตรสวัสดิการแห่งรัฐซื้อสินค้าจำเป็น',
+          desc: 'รับสิทธิ์สวัสดิการข้าวสารอาหารแห้งมูลค่า 1,000 บาทฟรี! เพิ่มพลังชีวิต QoL (DC 6: ตรวจสอบ INF)',
+          dc: 6,
+          statKey: 'INF'
+        },
+        {
+          id: 'buy_essentials',
+          icon: '🍚',
+          name: 'เข้าร่วมกองทุนชุมชนช่วยเหลือน้ำ-ไฟ',
+          desc: 'ขอรับการลดหย่อนค่าสาธารณูปโภคบรรเทาพิษเงินเฟ้อ (DC 8: ตรวจสอบ LAB)',
+          dc: 8,
+          statKey: 'LAB'
+        },
+        {
+          id: 'digital_help',
+          icon: '📱',
+          name: 'ขอความช่วยเหลือชุมชนก้าวข้าม Digital Divide',
+          desc: 'ขอให้อาสาสมัครลงทะเบียนยืนยันตัวตนดิจิทัลเพื่อรับสิทธิ์เงินอุดหนุนรัฐ (DC 9: ตรวจสอบ DIG)',
+          dc: 9,
+          statKey: 'DIG'
+        }
+      ];
+    }
   }
 
-  // Default selection
-  if (!selectedActionId && actions.length > 0) {
+  // Ensure selectedActionId is valid for the current round's actions
+  const selectedExists = actions.some(act => act.id === selectedActionId);
+  if (!selectedExists && actions.length > 0) {
     selectedActionId = actions[0].id;
     selectedActionName = actions[0].name;
+  } else {
+    const currentAction = actions.find(act => act.id === selectedActionId);
+    if (currentAction) {
+      selectedActionName = currentAction.name;
+    }
   }
 
   container.innerHTML = actions.map(act => {
@@ -549,7 +558,7 @@ function renderClassActionChoices(player, room, chapter) {
 function updateSelectedActionPill() {
   const pill = document.getElementById('dice-selected-action-pill');
   if (pill) {
-    pill.textContent = `การกระทำที่เลือก: ${selectedActionName}`;
+    pill.textContent = `ทางเลือกที่เลือก: ${selectedActionName}`;
     pill.title = selectedActionName;
   }
 }
@@ -617,7 +626,7 @@ function setupStageNavigation() {
       }
       setTimeout(() => {
         btnDistrictAdvance.disabled = false;
-        btnDistrictAdvance.innerHTML = '<span>🚩 สรุปผลและเปิดไตรมาสถัดไปทันที ➔</span>';
+        btnDistrictAdvance.innerHTML = '<span>🚩 สรุปผลและเปิดรอบถัดไปทันที ➔</span>';
       }, 2000);
     });
   }
@@ -627,7 +636,7 @@ function setupStageNavigation() {
 export function triggerPlayerD20Roll() {
   if (isRolling) return;
   if (!selectedActionId) {
-    showToast('กรุณาเลือก 1 กลยุทธ์ในขั้นที่ 2 ก่อนทอยเต๋า', 'warning');
+    showToast('กรุณาเลือก 1 แผนการทำงานในขั้นตอนที่ 2 ก่อนทอยลูกเต๋า', 'warning');
     window.goToPlayerStage(2);
     return;
   }
@@ -702,7 +711,7 @@ export function showRollResolution(rollResult, myPlayer) {
     const btnRoll = document.getElementById('btn-roll-d20');
     if (btnRoll) {
       btnRoll.disabled = true;
-      btnRoll.innerHTML = `<span>✅ ดำเนินการในไตรมาสนี้แล้ว</span>`;
+      btnRoll.innerHTML = `<span>✅ ดำเนินการในรอบนี้แล้ว</span>`;
     }
 
     // 3. Switch from action button to quarter waiting box
@@ -726,12 +735,12 @@ export function showRollResolution(rollResult, myPlayer) {
       bannerClass = 'banner-nat20';
       playSound('fanfare');
       triggerScreenShake('gold');
-      spawnFloatingNumber('🌟 NATURAL 20!', 'gold');
+      spawnFloatingNumber('🌟 ทอยได้ 20 แต้มเต็ม!', 'gold');
     } else if (isNat1) {
       bannerClass = 'banner-nat1';
       playSound('crisis');
       triggerScreenShake('red');
-      spawnFloatingNumber('💀 CRITICAL FAILURE!', 'hp-loss');
+      spawnFloatingNumber('⚠️ ทอยได้ 1 แต้ม มีอุปสรรค!', 'hp-loss');
     } else if (isSuccess) {
       bannerClass = 'banner-success';
       playSound('cash');
@@ -745,9 +754,9 @@ export function showRollResolution(rollResult, myPlayer) {
     banner.innerHTML = `
       <div class="result-title">${rollResult.outcomeTitle}</div>
       <div class="result-calc">
-        ลูกเต๋า D20: <strong>${rollResult.d20}</strong> 
-        + Stat Mod: <strong>${rollResult.modifier >= 0 ? `+${rollResult.modifier}` : rollResult.modifier}</strong> 
-        = คะแนนรวม <strong>${rollResult.totalScore}</strong> (เป้าหมาย DC ${rollResult.dc})
+        ลูกเต๋า: <strong>${rollResult.d20}</strong> 
+        + แต้มโบนัส: <strong>${rollResult.modifier >= 0 ? `+${rollResult.modifier}` : rollResult.modifier}</strong> 
+        = ผลรวม <strong>${rollResult.totalScore}</strong> (เกณฑ์ผ่าน ${rollResult.dc} แต้ม)
       </div>
       <div class="result-desc">${rollResult.outcomeDesc}</div>
     `;
@@ -785,7 +794,7 @@ export function handleRollError() {
   const btnRoll = document.getElementById('btn-roll-d20');
   if (btnRoll) {
     btnRoll.disabled = true;
-    btnRoll.innerHTML = `<span>✅ ดำเนินการในไตรมาสนี้แล้ว</span>`;
+    btnRoll.innerHTML = `<span>✅ ดำเนินการในรอบนี้แล้ว</span>`;
   }
 
   const preRollBox = document.getElementById('stage3-pre-roll-actions');
@@ -808,9 +817,19 @@ export function onNewQuarterStarted(newRound) {
     resultBanner.classList.add('hidden');
     resultBanner.innerHTML = '';
   }
+  if (activeTypewriterTimer) {
+    clearTimeout(activeTypewriterTimer);
+    activeTypewriterTimer = null;
+  }
+  currentTypingLore = null;
+
   const aiGmBox = document.getElementById('ai-gm-lore-box');
+  const aiGmText = document.getElementById('ai-gm-lore-text');
   if (aiGmBox) {
     aiGmBox.classList.add('hidden');
+  }
+  if (aiGmText) {
+    aiGmText.textContent = '';
   }
 
   // 3. Reset dice arena: hide dice cube and show pedestal
@@ -831,7 +850,7 @@ export function onNewQuarterStarted(newRound) {
   const btnRoll = document.getElementById('btn-roll-d20');
   if (btnRoll) {
     btnRoll.disabled = false;
-    btnRoll.innerHTML = `<span>🎲 กดสุ่มชะตากรรม D20 ➔</span>`;
+    btnRoll.innerHTML = `<span>🎲 กดทอยลูกเต๋าตัดสินผล ➔</span>`;
   }
   const preRollBox = document.getElementById('stage3-pre-roll-actions');
   const postRollBox = document.getElementById('stage3-post-roll-box');
@@ -841,30 +860,63 @@ export function onNewQuarterStarted(newRound) {
   // 5. Reset selected action so player chooses fresh card
   selectedActionId = null;
   const pill = document.getElementById('dice-selected-action-pill');
-  if (pill) pill.textContent = 'การกระทำที่เลือก: -';
+  if (pill) pill.textContent = 'ทางเลือกที่เลือก: -';
 }
 window.onNewQuarterStarted = onNewQuarterStarted;
 
+// Active Typewriter Timer & Current Text State Tracker
+let activeTypewriterTimer = null;
+let currentTypingLore = null;
+
 // Render AI Dungeon Master Lore Box with Typewriter Effect
-export function renderAiGmLoreBox(loreText) {
+export function renderAiGmLoreBox(loreText, animate = true) {
   const box = document.getElementById('ai-gm-lore-box');
   const textEl = document.getElementById('ai-gm-lore-text');
   if (!box || !textEl || !loreText) return;
 
+  // If already actively typing this exact text, let it finish without interruption
+  if (currentTypingLore === loreText && activeTypewriterTimer) {
+    return;
+  }
+
+  // If already finished and showing this exact text, do nothing (no duplicate typewriter)
+  if (textEl.textContent.trim() === loreText.trim() && !box.classList.contains('hidden')) {
+    return;
+  }
+
   box.classList.remove('hidden');
-  typewriterEffect(textEl, loreText, 25);
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  if (animate) {
+    currentTypingLore = loreText;
+    typewriterEffect(textEl, loreText, 25);
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    // Instant display (e.g. restoring on room update or page refresh)
+    if (activeTypewriterTimer) {
+      clearTimeout(activeTypewriterTimer);
+      activeTypewriterTimer = null;
+    }
+    currentTypingLore = null;
+    textEl.textContent = loreText;
+  }
 }
 
-// Typewriter Text Animation
+// Typewriter Text Animation with cancellation of previous timer
 function typewriterEffect(element, text, speed = 25) {
+  if (activeTypewriterTimer) {
+    clearTimeout(activeTypewriterTimer);
+    activeTypewriterTimer = null;
+  }
   element.textContent = '';
   let i = 0;
   function type() {
     if (i < text.length) {
       element.textContent += text.charAt(i);
       i++;
-      setTimeout(type, speed);
+      activeTypewriterTimer = setTimeout(type, speed);
+    } else {
+      activeTypewriterTimer = null;
+      currentTypingLore = null;
     }
   }
   type();
@@ -910,7 +962,7 @@ export function openPartyRosterModal() {
   const modal = document.getElementById('modal-party-roster');
   const room = state.currentRoom;
   if (!modal || !room) {
-    showToast('กำลังโหลดข้อมูลเพื่อนร่วมเขต...', 'info');
+    showToast('กำลังโหลดข้อมูลสมาชิกในกลุ่ม...', 'info');
     return;
   }
 
@@ -959,7 +1011,7 @@ export function openPartyRosterModal() {
           </div>
           <div style="text-align: right; font-family: var(--font-mono); font-size: 0.78rem;">
             <div style="color: #f59e0b; font-weight: 600;">💰 ${Math.round(p.cash).toLocaleString()} บ.</div>
-            <small style="color: ${p.qol > 50 ? '#10b981' : '#f87171'};">❤️ ${p.qol || 50} HP</small>
+            <small style="color: ${p.qol > 50 ? '#10b981' : '#f87171'};">❤️ คุณภาพชีวิต ${p.qol || 50}%</small>
           </div>
         </div>
       `;

@@ -3,7 +3,7 @@
 // Supports 200-Player D&D Campaign, Master Screen, and D20 Rolls
 // =========================================================
 
-const { generateIndividualDndLore, isAIEnabled } = require('../../aiEngine');
+const { generateIndividualDndLore, generateRoundDynamicActions, isAIEnabled } = require('../../aiEngine');
 const { ROUNDS_DATA } = require('../constants/gameData');
 const {
   rooms,
@@ -13,7 +13,8 @@ const {
   fillDistrictBots,
   startDistrictWithBots,
   finalizeDistrictsAndBots,
-  getNationalAggregates
+  getNationalAggregates,
+  getRoomRoundActions
 } = require('../services/roomManager');
 const {
   resolvePlayerDndRoll,
@@ -26,6 +27,31 @@ const { createRateLimiter } = require('../utils/security');
 
 function registerSocketHandlers(io, rooms, options = {}) {
   const { getLocalIpAddress, QRCode, DEFAULT_PORT, verifyAdminPin } = options;
+
+  // Background pre-generation for next round's AI dynamic actions
+  function pregenerateNextRoundActions(room) {
+    if (!room || room.status !== 'playing') return;
+    const nextRound = room.round + 1;
+    if (nextRound > room.maxRounds) return;
+
+    if (room.roundActions && room.roundActions[nextRound]) return;
+
+    setTimeout(async () => {
+      try {
+        const nextRoundData = ROUNDS_DATA[nextRound - 1] || {};
+        const dynamicActions = await generateRoundDynamicActions(
+          nextRound,
+          nextRoundData,
+          room.macroStats || {}
+        );
+        if (!room.roundActions) room.roundActions = {};
+        room.roundActions[nextRound] = dynamicActions;
+        console.log(`[AI Pre-Gen] Ready: ${room.districtName} Round ${nextRound} actions`);
+      } catch (err) {
+        console.warn(`[AI Pre-Gen] Failed for Round ${nextRound}:`, err.message);
+      }
+    }, 100);
+  }
 
   // Broadcast national update to all Master Screens
   function broadcastNationalUpdate(liveEvent = null) {
@@ -156,15 +182,17 @@ function registerSocketHandlers(io, rooms, options = {}) {
           room.round = 1;
           room.phase = 'action';
           room.currentRoundData = ROUNDS_DATA[0];
-          room.players.forEach(p => { p.hasRolledThisRound = false; });
-          io.to(code).emit('room:started', { room, roundInfo: ROUNDS_DATA[0] });
-          io.to(code).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0] });
+          room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
+          const currentRoundActions = getRoomRoundActions(room, 1);
+          io.to(code).emit('room:started', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+          io.to(code).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+          pregenerateNextRoundActions(room);
         }
       }
 
       broadcastNationalUpdate({
         type: 'start',
-        message: `🚀 มหาแคมเปญเศรษฐกิจเปิดฉากแล้ว! มีเขตเศรษฐกิจเข้าร่วมทั้งสิ้น ${activeCount} เขต (เติมบอท 🤖 ครบสมบูรณ์)`
+        message: `🚀 เริ่มเกมเรียบร้อยแล้ว! มีกลุ่มเศรษฐกิจเข้าร่วมทั้งสิ้น ${activeCount} กลุ่ม (เติมบอท 🤖 ครบแล้ว)`
       });
       console.log(`[Master Screen] Started game for ${activeCount} active districts.`);
     });
@@ -197,7 +225,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       broadcastNationalUpdate({
         type: 'settle',
-        message: `⚙️ ประมวลผลเศรษฐกิจไตรมาสที่ ${currentRound} ครบทุกเขต (${settledCount} เขต) เรียบร้อยแล้ว!`
+        message: `⚙️ ประมวลผลเศรษฐกิจรอบที่ ${currentRound} ครบทุกกลุ่ม (${settledCount} กลุ่ม) เรียบร้อยแล้ว!`
       });
       console.log(`[Master Screen] Global Settle completed for ${settledCount} districts.`);
     });
@@ -217,11 +245,14 @@ function registerSocketHandlers(io, rooms, options = {}) {
             room.currentRoundData = ROUNDS_DATA[room.round - 1];
             room.phase = 'action';
             // Security: Reset round roll eligibility for all players
-            room.players.forEach(p => { p.hasRolledThisRound = false; });
+            room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
+            const currentRoundActions = getRoomRoundActions(room, room.round);
             io.to(code).emit('room:updated', {
               room,
-              roundInfo: room.currentRoundData
+              roundInfo: room.currentRoundData,
+              roundActions: currentRoundActions
             });
+            pregenerateNextRoundActions(room);
           } else {
             isFinalGameOver = true;
             room.status = 'gameover';
@@ -235,12 +266,12 @@ function registerSocketHandlers(io, rooms, options = {}) {
       if (isFinalGameOver) {
         broadcastNationalUpdate({
           type: 'gameover',
-          message: `🏆 สิ้นสุดมหาแคมเปญ 6 ไตรมาส! เข้าสู่การประเมิน 3 มหาปรัชญาเศรษฐกิจและประกาศผู้ชนะทุกเขต!`
+          message: `🏆 สิ้นสุดการเล่นครบ 6 รอบ! สรุปผลการประเมินทางเศรษฐกิจและผู้ชนะในแต่ละกลุ่ม`
         });
       } else {
         broadcastNationalUpdate({
           type: 'advance',
-          message: `🚩 ทุกเขตเศรษฐกิจก้าวเข้าสู่ ${ROUNDS_DATA[nextRound - 1].chapterName}`
+          message: `🚩 ทุกกลุ่มเริ่มต้น ${ROUNDS_DATA[nextRound - 1].chapterName}`
         });
       }
       console.log(`[Master Screen] Global advance executed (isFinalGameOver: ${isFinalGameOver}).`);
@@ -257,18 +288,24 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       console.log(`[Quick Join] Player ${player.name} (${player.className}) assigned to ${room.districtName} (${room.code})`);
 
+      const currentRoundActions = getRoomRoundActions(room, room.round);
       socket.emit('player:init', {
         room,
         myPlayer: player,
-        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
       });
 
-      io.to(room.code).emit('room:updated', { room });
+      io.to(room.code).emit('room:updated', { 
+        room,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
+      });
 
-      // Notify Master Screen of new adventurer
+      // Notify Master Screen of new player
       broadcastNationalUpdate({
         type: 'join',
-        message: `👤 ${player.name} ได้ถือกำเนิดเป็น "${player.className}" ใน ${room.districtName}!`
+        message: `👤 ${player.name} เข้าร่วมเป็น "${player.className}" ใน ${room.districtName}`
       });
     });
 
@@ -305,14 +342,20 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       console.log(`[Player Reconnected] ${player.name} (${player.className}) resumed in ${room.districtName} (${cleanCode})`);
 
+      const currentRoundActions = getRoomRoundActions(room, room.round);
       socket.emit('player:reconnected', {
         room,
         myPlayer: player,
-        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
       });
 
       // Update other players in district that this player is back
-      io.to(cleanCode).emit('room:updated', { room });
+      io.to(cleanCode).emit('room:updated', { 
+        room,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
+      });
     });
 
     // ---------------------------------------------------------
@@ -357,9 +400,9 @@ function registerSocketHandlers(io, rooms, options = {}) {
       // Prepare Live Ticker notification for Master Screen
       let tickerMsg = `${player.name} (${room.districtName}): ${rollResult.outcomeTitle}`;
       if (rollResult.isNat20) {
-        tickerMsg = `🎉 [NAT 20!] ${player.name} (${room.districtName}) ร่าย ${rollResult.actionName} ปังสุดๆ!`;
+        tickerMsg = `🎉 [ได้ 20 แต้มเต็ม!] ${player.name} (${room.districtName}) ทำตามแผน ${rollResult.actionName} ได้ผลยอดเยี่ยมมาก!`;
       } else if (rollResult.isNat1) {
-        tickerMsg = `💀 [NAT 1!] ${player.name} (${room.districtName}) เกิดอุบัติเหตุทางเศรษฐกิจใน ${rollResult.actionName}!`;
+        tickerMsg = `⚠️ [ได้ 1 แต้ม!] ${player.name} (${room.districtName}) พบอุปสรรคและต้นทุนสูงขึ้นในการ ${rollResult.actionName}`;
       } else if (room.macroStats.crisisAlert) {
         tickerMsg = `🚨 ${room.districtName} เข้าสู่ภาวะวิกฤต! ${room.macroStats.crisisAlert}`;
       }
@@ -405,7 +448,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
         room.currentRoundData = ROUNDS_DATA[room.round - 1];
         room.phase = 'action';
         // Security: Reset round roll eligibility for all players in district
-        room.players.forEach(p => { p.hasRolledThisRound = false; });
+        room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
       } else {
         room.status = 'gameover';
         room.phase = 'dashboard';
@@ -413,15 +456,18 @@ function registerSocketHandlers(io, rooms, options = {}) {
         io.to(roomCode).emit('game_over', { room, finalEval });
       }
 
+      const currentRoundActions = getRoomRoundActions(room, room.round);
       io.to(roomCode).emit('room:updated', {
         room,
         settlement,
-        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
       });
+      pregenerateNextRoundActions(room);
 
       broadcastNationalUpdate({
         type: 'advance',
-        message: `🚩 ${room.districtName} เดินทางเข้าสู่ ${ROUNDS_DATA[room.round - 1].chapterName}`
+        message: `🚩 ${room.districtName} เข้าสู่ ${ROUNDS_DATA[room.round - 1].chapterName}`
       });
     });
 
@@ -437,7 +483,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       broadcastNationalUpdate({
         type: 'bots',
-        message: `🤖 ${room.districtName} เติมบอทนักผจญภัยครบ 10 คนแล้ว พร้อมเริ่มปฏิบัติการ!`
+        message: `🤖 ${room.districtName} เติมบอทครบ 10 คนแล้ว พร้อมเริ่มเล่น!`
       });
     });
 
@@ -448,12 +494,14 @@ function registerSocketHandlers(io, rooms, options = {}) {
       const room = startDistrictWithBots(roomCode);
       if (!room) return;
 
-      io.to(roomCode).emit('room:started', { room, roundInfo: ROUNDS_DATA[0] });
-      io.to(roomCode).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0] });
+      const currentRoundActions = getRoomRoundActions(room, 1);
+      io.to(roomCode).emit('room:started', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+      io.to(roomCode).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+      pregenerateNextRoundActions(room);
 
       broadcastNationalUpdate({
         type: 'start',
-        message: `🚀 ${room.districtName} รวมพลครบ 10 คนแล้ว (เติมบอท 🤖 สมบูรณ์) เริ่มต้นไตรมาสที่ 1!`
+        message: `🚀 ${room.districtName} สมาชิกครบ 10 คนแล้ว (เติมบอท 🤖 สมบูรณ์) เริ่มต้นรอบที่ 1!`
       });
       console.log(`[District Started with Bots] ${room.districtName} (${roomCode})`);
     });
@@ -490,18 +538,27 @@ function registerSocketHandlers(io, rooms, options = {}) {
       // Check existing player or assign role
       let player = room.players.find(p => p.socketId === socket.id);
       if (!player) {
-        const { player: newPlayer } = quickJoinMaster(playerName, socket.id);
-        player = newPlayer;
+        const result = quickJoinMaster(playerName, socket.id);
+        room = result.room;
+        player = result.player;
+        socket.roomCode = room.code;
+        socket.join(room.code);
       }
 
       socket.playerId = player.id;
+      const currentRoundActions = getRoomRoundActions(room, room.round);
       socket.emit('player:init', {
         room,
         myPlayer: player,
-        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
       });
 
-      io.to(cleanCode).emit('room:updated', { room });
+      io.to(cleanCode).emit('room:updated', { 
+        room,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
+      });
     });
 
     // Disconnect & Mark Player for Auto-Bot Takeover

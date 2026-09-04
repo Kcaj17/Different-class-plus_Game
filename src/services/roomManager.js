@@ -3,7 +3,7 @@
 // Supports 200 Players (20 Districts x 10 Players) + Master Screen
 // =========================================================
 
-const { ROLE_TEMPLATES, ROUNDS_DATA } = require('../constants/gameData');
+const { ROLE_TEMPLATES, ROUNDS_DATA, THEMATIC_ROUND_ACTIONS } = require('../constants/gameData');
 const { calculateLorenzAndGini } = require('../engine/economicsEngine');
 const { sanitizeText } = require('../utils/security');
 
@@ -57,7 +57,9 @@ function createDistrictRoom(roomCode, districtIndex = 1, hostSocketId = null) {
       crisisAlert: null
     },
     players: [],
-    roundActions: {},
+    roundActions: {
+      1: THEMATIC_ROUND_ACTIONS[1]
+    },
     actionLog: [],
     d20Logs: [],
     autoBotFill: true,
@@ -78,40 +80,103 @@ function shuffleArray(array) {
   return arr;
 }
 
+// Check if the master game has already started (at least one district is playing or gameover)
+function isMasterGameStarted() {
+  for (const r of rooms.values()) {
+    if (r.status === 'playing' || r.status === 'gameover') {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Get the active round, phase, and roundData from currently playing districts
+function getMasterGameProgress() {
+  for (const r of rooms.values()) {
+    if (r.status === 'playing') {
+      return {
+        round: r.round,
+        phase: r.phase,
+        currentRoundData: r.currentRoundData || ROUNDS_DATA[r.round - 1]
+      };
+    }
+  }
+  return {
+    round: 1,
+    phase: 'action',
+    currentRoundData: ROUNDS_DATA[0]
+  };
+}
+
 // Auto-Matchmaking: Consolidate Humans First (Fill District 1 -> 2 -> 3...)
+// In-Game (แนวทางที่ 2): Lock active full districts and route late joiners to a new district!
 function quickJoinMaster(playerName, socketId) {
   initializeMasterDistricts();
 
-  // Consolidate Humans First: Find the first district (1..20) that has room (< 10 humans)
+  const gameStarted = isMasterGameStarted();
   let targetRoom = null;
 
-  for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-    const pad = i < 10 ? `0${i}` : `${i}`;
-    const code = `DIST-${pad}`;
-    const room = rooms.get(code);
-    if (!room) continue;
+  if (!gameStarted) {
+    // ---------------------------------------------------------
+    // Case 1: LOBBY / PRE-GAME
+    // Consolidate humans sequentially: Fill District 1 (up to 10) -> District 2 -> etc.
+    // ---------------------------------------------------------
+    for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
+      const pad = i < 10 ? `0${i}` : `${i}`;
+      const code = `DIST-${pad}`;
+      const room = rooms.get(code);
+      if (!room) continue;
 
-    const humanCount = room.players.filter(p => !p.isBot).length;
-    if (humanCount < PLAYERS_PER_DISTRICT) {
+      if (room.players.length < PLAYERS_PER_DISTRICT) {
+        targetRoom = room;
+        break;
+      }
+    }
+  } else {
+    // ---------------------------------------------------------
+    // Case 2: GAME ALREADY STARTED (แนวทางที่ 2)
+    // Any district that is already 'playing' with full capacity (10 players) is LOCKED.
+    // Late joiners MUST be routed to a new district!
+    // ---------------------------------------------------------
+    for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
+      const pad = i < 10 ? `0${i}` : `${i}`;
+      const code = `DIST-${pad}`;
+      const room = rooms.get(code);
+      if (!room) continue;
+
+      // Skip districts that are already playing and full (10 players)
+      if (room.status === 'playing' && room.players.length >= PLAYERS_PER_DISTRICT) {
+        continue;
+      }
+
+      // Found an open / closed / not-full district
       targetRoom = room;
       break;
     }
   }
 
   if (!targetRoom) {
-    // If all 20 districts are completely filled with 10 humans (200 players), fallback to dynamic
+    // If all 20 districts are completely filled with 10 players, fallback to dynamic district
     const fallbackCode = generateRoomCode();
-    targetRoom = createDistrictRoom(fallbackCode, TOTAL_DISTRICTS + 1);
+    targetRoom = createDistrictRoom(fallbackCode, rooms.size + 1);
+  }
+
+  // If game is already in progress, synchronize and activate the target district
+  if (gameStarted && targetRoom.status !== 'playing') {
+    const progress = getMasterGameProgress();
+    targetRoom.status = 'playing';
+    targetRoom.round = progress.round;
+    targetRoom.phase = progress.phase;
+    targetRoom.currentRoundData = progress.currentRoundData;
+  }
+
+  // Ensure available roles are initialized
+  if (!targetRoom.availableRoles || targetRoom.availableRoles.length === 0) {
+    targetRoom.availableRoles = shuffleArray(JSON.parse(JSON.stringify(ROLE_TEMPLATES)));
   }
 
   // Assign random role based on Rawlsian Veil of Ignorance
-  let roleTemplate;
-  if (targetRoom.availableRoles && targetRoom.availableRoles.length > 0) {
-    roleTemplate = targetRoom.availableRoles.pop();
-  } else {
-    const freshShuffled = shuffleArray(JSON.parse(JSON.stringify(ROLE_TEMPLATES)));
-    roleTemplate = freshShuffled[0];
-  }
+  const roleTemplate = targetRoom.availableRoles.pop();
 
   const cleanName = sanitizeText(playerName, 24);
   const player = {
@@ -134,6 +199,17 @@ function quickJoinMaster(playerName, socketId) {
   };
 
   targetRoom.players.push(player);
+
+  // If target district is active/playing, auto-fill remaining slots with bots up to exactly 10 players
+  // so the district is complete and ready for national macro settlement
+  if (targetRoom.status === 'playing') {
+    fillDistrictBots(targetRoom);
+    targetRoom.players.forEach(p => {
+      if (p.isBot) {
+        p.hasRolledThisRound = false;
+      }
+    });
+  }
 
   // Recalculate Lorenz & Gini
   const eco = calculateLorenzAndGini(targetRoom.players);
@@ -328,6 +404,14 @@ function getNationalAggregates() {
   };
 }
 
+function getRoomRoundActions(room, roundNumber) {
+  const r = roundNumber || (room ? room.round : 1) || 1;
+  if (room && room.roundActions && room.roundActions[r]) {
+    return room.roundActions[r];
+  }
+  return THEMATIC_ROUND_ACTIONS[r] || THEMATIC_ROUND_ACTIONS[1];
+}
+
 module.exports = {
   rooms,
   MASTER_SESSION_CODE,
@@ -340,5 +424,8 @@ module.exports = {
   fillDistrictBots,
   startDistrictWithBots,
   finalizeDistrictsAndBots,
-  getNationalAggregates
+  getNationalAggregates,
+  getRoomRoundActions,
+  isMasterGameStarted,
+  getMasterGameProgress
 };

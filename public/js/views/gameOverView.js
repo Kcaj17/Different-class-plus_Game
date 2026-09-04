@@ -14,7 +14,7 @@ export function renderGameOverView(summary) {
   if (summary.isCountrySaved) {
     if (icon) icon.textContent = '🎉';
     if (title) title.textContent = 'ภารกิจสำเร็จ: สังคมรอดพ้นวิกฤตและรักษาวินัยการคลังได้!';
-    if (desc) desc.textContent = `ระบบเศรษฐกิจผ่านพ้น 6 ไตรมาส หนี้สาธารณะคงอยู่ที่ ${summary.finalDebtToGdp}% (ต่ำกว่าเพดาน 70%) และดัชนีจีนีอยู่ที่ ${summary.finalGini}`;
+    if (desc) desc.textContent = `ระบบเศรษฐกิจผ่านพ้น 6 รอบ หนี้สาธารณะคงอยู่ที่ ${summary.finalDebtToGdp}% (ต่ำกว่าเพดาน 70%) และดัชนีจีนีอยู่ที่ ${summary.finalGini}`;
   } else {
     if (icon) icon.textContent = '🚨';
     if (title) title.textContent = 'วิกฤตเศรษฐกิจ: เกิดความไม่สมดุลทางการคลังหรือความเหลื่อมล้ำ!';
@@ -51,22 +51,22 @@ export function renderGameOverView(summary) {
   if (winnersContainer && summary.roleWinners) {
     winnersContainer.innerHTML = `
       <div class="role-win-item">
-        <strong>🏢 เจ้าสัวยอดเยี่ยม:</strong>
+        <strong>🏢 เจ้าของธุรกิจที่มีสินทรัพย์สูงสุด:</strong>
         <div>${summary.roleWinners.capitalist ? summary.roleWinners.capitalist.name : '-'}</div>
         <small>${summary.roleWinners.capitalist ? summary.roleWinners.capitalist.score : ''}</small>
       </div>
       <div class="role-win-item">
-        <strong>🏪 ร้านค้ายอดขายสูงสุด:</strong>
+        <strong>🏪 ร้านค้าชุมชนยอดขายสูงสุด:</strong>
         <div>${summary.roleWinners.sme ? summary.roleWinners.sme.name : '-'}</div>
         <small>${summary.roleWinners.sme ? summary.roleWinners.sme.score : ''}</small>
       </div>
       <div class="role-win-item">
-        <strong>👔 พลเมืองคุณภาพชีวิตดีเด่น:</strong>
+        <strong>👔 ผู้มีคุณภาพชีวิตดีเด่น:</strong>
         <div>${summary.roleWinners.citizen ? summary.roleWinners.citizen.name : '-'}</div>
         <small>${summary.roleWinners.citizen ? summary.roleWinners.citizen.score : ''}</small>
       </div>
       <div class="role-win-item">
-        <strong>👵 รางวัลหลุดพ้นความยากจน:</strong>
+        <strong>👵 ผู้ที่มีพัฒนาการคุณภาพชีวิตสูงสุด:</strong>
         <div>${summary.roleWinners.vulnerable ? summary.roleWinners.vulnerable.name : '-'}</div>
         <small>${summary.roleWinners.vulnerable ? summary.roleWinners.vulnerable.score : ''}</small>
       </div>

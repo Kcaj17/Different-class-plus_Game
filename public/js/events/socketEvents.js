@@ -3,7 +3,7 @@
    Supports Master Command Center, D20 Rolls, and AI GM
    ========================================================= */
 
-import { socket, state, setMyPlayer, setCurrentRoomCode, setCurrentRoom } from '../state.js';
+import { socket, state, setMyPlayer, setCurrentRoomCode, setCurrentRoom, setCurrentRoundActions } from '../state.js';
 import { playSound } from '../ui/audio.js';
 import { showToast } from '../ui/toast.js';
 import { switchView } from '../ui/views.js';
@@ -35,10 +35,11 @@ export function initSocketListeners() {
   // ---------------------------------------------------------
   // PLAYER D&D EVENTS
   // ---------------------------------------------------------
-  socket.on('player:init', ({ room, myPlayer, roundInfo }) => {
+  socket.on('player:init', ({ room, myPlayer, roundInfo, roundActions }) => {
     setMyPlayer(myPlayer);
     setCurrentRoomCode(room.code);
     setCurrentRoom(room);
+    if (roundActions) setCurrentRoundActions(roundActions);
 
     // Save player session to sessionStorage for seamless refresh
     try {
@@ -55,15 +56,16 @@ export function initSocketListeners() {
     showCharacterReveal(myPlayer, room, () => {
       switchView('player');
       if (window.goToPlayerStage) window.goToPlayerStage(1);
-      renderPlayerView(myPlayer, room, roundInfo);
-      showToast(`เข้าสู่ ${room.districtName} ประจำการเรียบร้อยแล้ว!`, 'success', 3500);
+      renderPlayerView(myPlayer, room, roundInfo, roundActions);
+      showToast(`เข้าสู่ ${room.districtName} เรียบร้อยแล้ว!`, 'success', 3500);
     });
   });
 
-  socket.on('player:reconnected', ({ room, myPlayer, roundInfo }) => {
+  socket.on('player:reconnected', ({ room, myPlayer, roundInfo, roundActions }) => {
     setMyPlayer(myPlayer);
     setCurrentRoomCode(room.code);
     setCurrentRoom(room);
+    if (roundActions) setCurrentRoundActions(roundActions);
 
     // Refresh saved session in sessionStorage
     try {
@@ -87,7 +89,7 @@ export function initSocketListeners() {
 
     // Direct switch to player view without Gacha card reveal
     switchView('player');
-    renderPlayerView(myPlayer, room, roundInfo || room.currentRoundData);
+    renderPlayerView(myPlayer, room, roundInfo || room.currentRoundData, roundActions);
 
     if (room.status === 'playing') {
       if (myPlayer.hasRolledThisRound) {
@@ -113,29 +115,34 @@ export function initSocketListeners() {
   });
 
   socket.on('player:ai_lore', ({ aiLore }) => {
-    renderAiGmLoreBox(aiLore);
+    if (state.myPlayer) {
+      state.myPlayer.lastAiLore = aiLore;
+    }
+    renderAiGmLoreBox(aiLore, true);
   });
 
   // ---------------------------------------------------------
   // DISTRICT / ROOM UPDATES
   // ---------------------------------------------------------
-  socket.on('room:started', ({ room, roundInfo }) => {
+  socket.on('room:started', ({ room, roundInfo, roundActions }) => {
     setCurrentRoom(room);
+    if (roundActions) setCurrentRoundActions(roundActions);
     if (state.myPlayer && room.players) {
       const me = room.players.find(p => p.id === state.myPlayer.id || p.socketId === socket.id);
       if (me) setMyPlayer(me);
     }
-    showToast('🚀 รวมพลครบ 10 คนแล้ว! เริ่มต้นการผจญภัยไตรมาสที่ 1', 'success', 3500);
+    showToast('🚀 รวมกลุ่มครบ 10 คนแล้ว! เริ่มต้นรอบที่ 1', 'success', 3500);
     playSound('fanfare');
     if (state.myPlayer) {
-      renderPlayerView(state.myPlayer, room, roundInfo || room.currentRoundData);
+      renderPlayerView(state.myPlayer, room, roundInfo || room.currentRoundData, roundActions);
       if (window.goToPlayerStage) window.goToPlayerStage(1);
     }
   });
 
-  socket.on('room:updated', ({ room, settlement, roundInfo }) => {
+  socket.on('room:updated', ({ room, settlement, roundInfo, roundActions }) => {
     const prevRound = state.currentRoom ? state.currentRoom.round : null;
     setCurrentRoom(room);
+    if (roundActions) setCurrentRoundActions(roundActions);
 
     if (state.myPlayer && room.players) {
       const me = room.players.find(p => p.id === state.myPlayer.id || p.socketId === socket.id);
@@ -145,8 +152,8 @@ export function initSocketListeners() {
     // Critical UX: If round advanced to a new quarter, reset player view to Stage 1!
     if (prevRound !== null && room.round > prevRound && room.status === 'playing') {
       const chapter = roundInfo || room.currentRoundData;
-      const chapterName = chapter ? chapter.chapterName : `ไตรมาสที่ ${room.round}`;
-      showToast(`🚩 เริ่มต้นไตรมาสที่ ${room.round}: ${chapterName}`, 'success', 4000);
+      const chapterName = chapter ? chapter.chapterName : `รอบที่ ${room.round}`;
+      showToast(`🚩 เริ่มต้นรอบที่ ${room.round}: ${chapterName}`, 'success', 4000);
       playSound('fanfare');
       onNewQuarterStarted(room.round);
     }
@@ -154,7 +161,7 @@ export function initSocketListeners() {
     if (state.isProjector) {
       renderProjectorView(room, roundInfo || room.currentRoundData);
     } else if (state.myPlayer) {
-      renderPlayerView(state.myPlayer, room, roundInfo || room.currentRoundData);
+      renderPlayerView(state.myPlayer, room, roundInfo || room.currentRoundData, roundActions);
     }
 
     if (settlement && settlement.crisis) {

@@ -10,6 +10,7 @@ export const state = {
   isProjector: false,
   soundEnabled: true,
   currentRoom: null,
+  currentRoundActions: null,
   lorenzChart: null,
   finalLorenzChart: null
 };
@@ -38,4 +39,8 @@ export function toggleSound() {
 export function setCurrentRoom(room) {
   state.currentRoom = room;
   window._currentRoom = room;
+}
+
+export function setCurrentRoundActions(actions) {
+  state.currentRoundActions = actions;
 }

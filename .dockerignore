@@ -1,0 +1,39 @@
+# Dependencies & Package Managers
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Git & Version Control
+.git
+.gitignore
+
+# Environment secrets (Do not bake secrets into image)
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor files
+.agents
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Test & Evaluation Scripts (Development only)
+test_*.js
+
+# Large Assets & Raw Documents (Excluded to keep image lightweight)
+*.pdf
+pdf_content.txt
+
+# Documentation & Logs
+*.log

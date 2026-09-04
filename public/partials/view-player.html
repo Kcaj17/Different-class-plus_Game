@@ -1,4 +1,4 @@
-<!-- ================= 3. PLAYER VIEW (Stage-by-Stage RPG Experience) ================= -->
+<!-- ================= 3. PLAYER VIEW (Player Experience) ================= -->
 <section id="view-player" class="hidden-view">
   
   <!-- Sticky RPG Top HUD -->
@@ -9,13 +9,13 @@
       </div>
       <div class="hud-character-info">
         <div class="hud-title-row">
-          <strong id="pl-name" class="hud-name">ผู้กล้า</strong>
-          <span id="pl-district-badge" class="hud-district-badge">เขตเศรษฐกิจที่ 1</span>
+          <strong id="pl-name" class="hud-name">ผู้เล่น</strong>
+          <span id="pl-district-badge" class="hud-district-badge">กลุ่มเศรษฐกิจที่ 1</span>
         </div>
-        <span id="pl-class-badge" class="hud-class-badge">นักผจญภัยแรงงาน</span>
+        <span id="pl-class-badge" class="hud-class-badge">พนักงาน / แรงงานทั่วไป</span>
       </div>
-      <button id="btn-open-party-roster" class="btn-party-trigger" title="ดูเพื่อนร่วมเขต">
-        <span>👥 ปาร์ตี้</span>
+      <button id="btn-open-party-roster" class="btn-party-trigger" title="ดูสมาชิกในกลุ่ม">
+        <span>👥 เพื่อนร่วมกลุ่ม</span>
       </button>
     </div>
 
@@ -23,7 +23,7 @@
     <div class="hud-vitals-row">
       <div class="hud-hp-box">
         <div class="hud-hp-label">
-          <span>❤️ สุขภาวะ (HP)</span>
+          <span>❤️ คุณภาพชีวิต (HP)</span>
           <strong id="pl-hp-text">50/100</strong>
         </div>
         <div class="hud-hp-track">
@@ -48,19 +48,19 @@
     <div class="waiting-header">
       <div class="waiting-badge-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
         <span class="pulse-dot"></span>
-        <span id="waiting-district-badge" class="chapter-round-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🏰 เขตเศรษฐกิจที่ 1 (DIST-01)</span>
-        <span class="stage-guide-tag">⏳ ห้องรวมพลประจำเขต</span>
+        <span id="waiting-district-badge" class="chapter-round-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">📍 กลุ่มเศรษฐกิจที่ 1 (DIST-01)</span>
+        <span class="stage-guide-tag">⏳ ห้องรอรวมกลุ่ม</span>
       </div>
-      <h3 class="waiting-title">กำลังรวบรวมสมาชิกผู้กล้าประจำเขต...</h3>
+      <h3 class="waiting-title">กำลังรอสมาชิกเข้าร่วมกลุ่ม...</h3>
       <p class="waiting-desc">
-        เพื่อความสมดุลทางเศรษฐกิจ แต่ละเขตต้องการสมาชิก 10 คน (ตัวแทน 4 ชนชั้น: นายทุน, SME, ประชาชน, และกลุ่มเปราะบาง)
+        เพื่อจำลองสภาพเศรษฐกิจที่สมจริง แต่ละกลุ่มจะมีสมาชิก 10 คน (มี 4 กลุ่มอาชีพ: นายทุน, ร้านค้า SME, พนักงานทั่วไป, และกลุ่มเปราะบาง)
       </p>
     </div>
 
     <!-- Capacity Bar & Counter -->
     <div class="waiting-roster-box">
       <div class="roster-count-row">
-        <span style="color: #94a3b8; font-size: 0.88rem;">ความพร้อมของเขต:</span>
+        <span style="color: #94a3b8; font-size: 0.88rem;">จำนวนสมาชิกในกลุ่ม:</span>
         <strong id="waiting-roster-count" style="color: #38bdf8; font-family: var(--font-mono); font-size: 1.1rem;">1 / 10 คน</strong>
       </div>
       <div class="waiting-progress-track">
@@ -75,10 +75,10 @@
     <div class="waiting-actions-bar">
       <div class="waiting-status-notice">
         <span class="spinner-icon">🔄</span>
-        <span id="waiting-status-text">กำลังรอเพื่อนร่วมเขต หรือรอผู้ดำเนินรายการปล่อยตัวพร้อมกัน...</span>
+        <span id="waiting-status-text">กำลังรอเพื่อนร่วมกลุ่ม หรือรอผู้ดำเนินรายการเริ่มเกมพร้อมกัน...</span>
       </div>
       <button id="btn-start-with-bots" class="btn btn-primary btn-large btn-glow" style="width: 100%; margin-top: 10px; padding: 14px 20px; font-size: 1.05rem;">
-        <span>🤖 เริ่มต้นทันที (เติมบอทให้ครบ 10 คน) ➔</span>
+        <span>🤖 เริ่มเล่นทันที (ให้ระบบเติมบอทจนครบ 10 คน) ➔</span>
       </button>
     </div>
   </div>
@@ -87,17 +87,17 @@
   <div class="stage-stepper-bar glass-card">
     <button id="step-pill-1" class="stage-step-pill active" onclick="window.goToPlayerStage(1)">
       <span class="step-num">1</span>
-      <span class="step-text">เควสต์สถานการณ์</span>
+      <span class="step-text">ข้อมูลสถานการณ์</span>
     </button>
     <div class="stage-connector"></div>
     <button id="step-pill-2" class="stage-step-pill" onclick="window.goToPlayerStage(2)">
       <span class="step-num">2</span>
-      <span class="step-text">วางแผนกลยุทธ์</span>
+      <span class="step-text">เลือกแผนทำงาน</span>
     </button>
     <div class="stage-connector"></div>
     <button id="step-pill-3" class="stage-step-pill" onclick="window.goToPlayerStage(3)">
       <span class="step-num">3</span>
-      <span class="step-text">ทอยเต๋า D20</span>
+      <span class="step-text">ทอยลูกเต๋าตัดสินผล</span>
     </button>
   </div>
 
@@ -105,18 +105,18 @@
   <div id="stage-encounter" class="rpg-stage active-stage">
     <div class="stage-card glass-card">
       <div class="stage-badge-row">
-        <span id="pl-round-title" class="chapter-round-tag">ไตรมาสที่ 1 / 6</span>
+        <span id="pl-round-title" class="chapter-round-tag">รอบที่ 1 / 6</span>
         <span class="stage-guide-tag">📖 ขั้นที่ 1: วิเคราะห์สถานการณ์</span>
       </div>
-      <h3 id="pl-chapter-name" class="chapter-title">กำลังรอเปิดบท...</h3>
+      <h3 id="pl-chapter-name" class="chapter-title">กำลังรอเปิดรอบ...</h3>
       <div class="lore-scroll-box">
-        <p id="pl-chapter-lore" class="chapter-lore">เรื่องราวนโยบายและบททดสอบทางเศรษฐกิจประจำรอบ</p>
+        <p id="pl-chapter-lore" class="chapter-lore">ข้อมูลสถานการณ์ทางเศรษฐกิจประจำรอบ</p>
       </div>
       <div id="pl-chapter-news" class="chapter-news-alert">🔔 ข่าวด่วน: ...</div>
 
       <div class="stage-action-bar">
         <button id="btn-go-to-strategy" class="btn-primary btn-large btn-stage-next">
-          <span>🎯 วางแผนเลือกกลยุทธ์ ➔</span>
+          <span>🎯 ไปเลือกแผนทำงาน ➔</span>
         </button>
       </div>
     </div>
@@ -125,9 +125,9 @@
     <div class="glass-card char-summary-card">
       <div class="summary-header">
         <span class="summary-icon">✨</span>
-        <strong>ความสามารถพิเศษประจำคลาส (Class Perk):</strong>
+        <strong>จุดเด่นประจำอาชีพ:</strong>
       </div>
-      <p id="pl-perk-text" class="char-perk-desc">คำอธิบายความสามารถพิเศษ</p>
+      <p id="pl-perk-text" class="char-perk-desc">คำอธิบายจุดเด่นของอาชีพ</p>
 
       <div class="dnd-stats-grid">
         <div class="attr-box" id="attr-cap"></div>
@@ -142,8 +142,8 @@
   <div id="stage-strategy" class="rpg-stage hidden-stage">
     <div class="stage-card glass-card">
       <div class="stage-badge-row">
-        <span class="stage-guide-tag">🎯 ขั้นที่ 2: เลือกการกระทำของคุณ</span>
-        <span class="sub-hint">เลือก 1 กลยุทธ์เพื่อใช้ทอยเต๋า</span>
+        <span class="stage-guide-tag">🎯 ขั้นที่ 2: เลือกแผนการทำงานของคุณ</span>
+        <span class="sub-hint">เลือก 1 แผนการทำงานสำหรับรอบนี้</span>
       </div>
       
       <div id="pl-action-choices-container" class="action-choices-grid">
@@ -152,10 +152,10 @@
 
       <div class="stage-action-bar-split">
         <button id="btn-back-to-encounter" class="btn-secondary">
-          <span>⬅️ ย้อนกลับไปอ่านเควสต์</span>
+          <span>⬅️ ย้อนกลับไปดูสถานการณ์</span>
         </button>
         <button id="btn-go-to-dice" class="btn-primary btn-stage-next">
-          <span>🎲 ไปลานทอยเต๋า D20 ➔</span>
+          <span>🎲 ไปทอยลูกเต๋า ➔</span>
         </button>
       </div>
     </div>
@@ -165,8 +165,8 @@
   <div id="stage-dice" class="rpg-stage hidden-stage">
     <div class="stage-card glass-card dice-stage-card">
       <div class="stage-badge-row">
-        <span class="stage-guide-tag">🎲 ขั้นที่ 3: ลานประลองลูกเต๋า D20</span>
-        <span id="dice-selected-action-pill" class="selected-action-pill">การกระทำที่เลือก: -</span>
+        <span class="stage-guide-tag">🎲 ขั้นที่ 3: ทอยลูกเต๋าดูผลลัพธ์</span>
+        <span id="dice-selected-action-pill" class="selected-action-pill">แผนที่เลือก: -</span>
       </div>
 
       <!-- Tactile D20 Arena -->
@@ -174,21 +174,21 @@
         <!-- Pre-roll fate pedestal (Visible before roll) -->
         <div id="d20-pre-roll-pedestal" class="d20-pedestal-box">
           <div class="rune-circle-glow">
-            <span class="pedestal-rune">🔮</span>
+            <span class="pedestal-rune">🎲</span>
           </div>
-          <strong class="pedestal-title">แท่นอัญเชิญเต๋าแห่งโชคชะตา</strong>
-          <p class="pedestal-subtitle">แตะปุ่มด้านล่างเพื่ออัญเชิญและสุ่มแต้ม D20 ประจำไตรมาส</p>
+          <strong class="pedestal-title">พื้นที่ทอยลูกเต๋า</strong>
+          <p class="pedestal-subtitle">กดปุ่มด้านล่างเพื่อทอยลูกเต๋าดูผลการทำงานรอบนี้</p>
         </div>
 
         <!-- 3D Dice Cube (Appears only when user clicks สุ่ม / roll) -->
-        <div id="d20-dice-cube" class="d20-cube scale-pop-in hidden" title="ลูกเต๋าชะตากรรม D20">
+        <div id="d20-dice-cube" class="d20-cube scale-pop-in hidden" title="ลูกเต๋า 20 หน้า">
           <span id="d20-display-number" class="dice-num">20</span>
         </div>
-        <small id="d20-dice-hint" class="dice-hint hidden">🎲 ลูกเต๋ากำลังหมุนสุ่ม...</small>
+        <small id="d20-dice-hint" class="dice-hint hidden">🎲 ลูกเต๋ากำลังทอย...</small>
       </div>
 
       <button id="btn-roll-d20" class="btn-roll-primary">
-        <span>🎲 กดสุ่มชะตากรรม D20 ➔</span>
+        <span>🎲 กดทอยลูกเต๋า ➔</span>
       </button>
 
       <!-- Result Banner -->
@@ -198,7 +198,7 @@
       <div id="ai-gm-lore-box" class="ai-gm-box glass-card hidden">
         <div class="ai-gm-header">
           <span class="ai-icon">🤖</span>
-          <strong>คำบรรยายจาก AI Dungeon Master:</strong>
+          <strong>ผลวิเคราะห์จากระบบ AI:</strong>
         </div>
         <p id="ai-gm-lore-text" class="ai-lore-content">...</p>
       </div>
@@ -206,20 +206,20 @@
       <!-- Stage 3 Footer Navigation (Before Roll) -->
       <div id="stage3-pre-roll-actions" class="stage-action-bar-split" style="margin-top: 20px;">
         <button id="btn-back-to-strategy" class="btn-secondary btn-small">
-          <span>🔄 เปลี่ยนการกระทำ</span>
+          <span>🔄 เปลี่ยนแผนการทำงาน</span>
         </button>
       </div>
 
       <!-- Quarter Completed Waiting Box (After Roll) -->
       <div id="stage3-post-roll-box" class="quarter-waiting-box glass-card hidden" style="margin-top: 20px; text-align: center; padding: 18px 16px; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;">
         <div id="post-roll-icon" style="font-size: 1.8rem; margin-bottom: 6px;">⏳</div>
-        <strong id="post-roll-title" style="color: #34d399; font-size: 1.05rem; display: block; font-weight: 700;">คุณดำเนินการในไตรมาสนี้เรียบร้อยแล้ว!</strong>
+        <strong id="post-roll-title" style="color: #34d399; font-size: 1.05rem; display: block; font-weight: 700;">คุณดำเนินการในรอบนี้เรียบร้อยแล้ว!</strong>
         
         <!-- District Roll Progress Bar -->
         <div id="post-roll-progress-wrap" style="margin: 12px auto; max-width: 320px; background: rgba(0,0,0,0.35); border-radius: 10px; padding: 9px 12px; border: 1px solid rgba(255,255,255,0.06);">
           <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
-            <span style="color: #94a3b8;">ความคืบหน้าประจำเขต</span>
-            <strong id="post-roll-progress-text" style="color: #38bdf8; font-family: var(--font-mono);">ทอยแล้ว 0/10 คน (0%)</strong>
+            <span style="color: #94a3b8;">ความคืบหน้าในกลุ่มของคุณ</span>
+            <strong id="post-roll-progress-text" style="color: #38bdf8; font-family: var(--font-mono);">ดำเนินการแล้ว 0/10 คน (0%)</strong>
           </div>
           <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
             <div id="post-roll-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 4px; transition: width 0.4s ease;"></div>
@@ -227,15 +227,15 @@
         </div>
 
         <p id="player-waiting-hint" style="color: #94a3b8; font-size: 0.88rem; margin-top: 8px; line-height: 1.5;">
-          กำลังรอเพื่อนร่วมเขต หรือรอผู้ดำเนินรายการเปิดไตรมาสถัดไป...
+          กำลังรอเพื่อนร่วมกลุ่ม หรือรอผู้ดำเนินรายการเปิดรอบถัดไป...
         </p>
 
         <!-- Standalone / Host Quick Advance Button (Shown when all 10/10 have rolled) -->
         <div id="post-roll-advance-action" class="hidden" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1);">
           <button id="btn-district-advance" class="btn-primary btn-small" style="font-size: 0.84rem; padding: 8px 18px; background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
-            <span>🚩 สรุปผลและเปิดไตรมาสถัดไปทันที ➔</span>
+            <span>🚩 สรุปผลและเริ่มรอบถัดไป ➔</span>
           </button>
-          <div style="color: #64748b; font-size: 0.72rem; margin-top: 4px;">(กดเพื่อเริ่มไตรมาสถัดไปทันที หรือรอผู้ดำเนินรายการสั่งการจากจอใหญ่)</div>
+          <div style="color: #64748b; font-size: 0.72rem; margin-top: 4px;">(กดเพื่อเริ่มรอบถัดไปทันที หรือรอผู้ดำเนินรายการสั่งการจากหน้าจอใหญ่)</div>
         </div>
       </div>
     </div>
