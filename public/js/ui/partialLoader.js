@@ -19,7 +19,7 @@ export async function loadAllPartials() {
       if (!mountEl) return;
 
       try {
-        const response = await fetch(url);
+        const response = await fetch(`${url}?v=${Date.now()}`, { cache: 'no-cache' });
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status} loading ${url}`);
         }

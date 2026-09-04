@@ -8,7 +8,7 @@ import { playSound } from '../ui/audio.js';
 import { showToast } from '../ui/toast.js';
 import { switchView } from '../ui/views.js';
 import { renderMasterScreen, openDistrictInspector, updateMasterQrCode } from '../views/masterView.js';
-import { renderPlayerView, showRollResolution, renderAiGmLoreBox, showCharacterReveal, onNewQuarterStarted, handleRollError } from '../views/playerView.js';
+import { renderPlayerView, showRollResolution, renderAiGmLoreBox, showCharacterReveal, onNewQuarterStarted, handleRollError, updatePostRollWaitingState } from '../views/playerView.js';
 import { renderProjectorView } from '../views/projectorView.js';
 import { renderGameOverView } from '../views/gameOverView.js';
 
@@ -168,6 +168,22 @@ export function initSocketListeners() {
       showToast(settlement.crisis, 'danger', 6000);
       playSound('crisis');
     }
+  });
+
+  socket.on('room:player_disconnected', ({ playerId, name, message }) => {
+    showToast(message || `⚠️ ${name} ขาดการเชื่อมต่อ`, 'warning', 4000);
+    if (state.currentRoom && state.currentRoom.players) {
+      const p = state.currentRoom.players.find(item => item.id === playerId);
+      if (p) p.isDisconnected = true;
+    }
+    if (state.currentRoom && state.myPlayer) {
+      updatePostRollWaitingState(state.currentRoom, state.myPlayer);
+    }
+  });
+
+  socket.on('room:bot_takeover', ({ playerName, message }) => {
+    showToast(message || `🤖 บอทเข้าช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อเรียบร้อยแล้ว`, 'info', 4000);
+    playSound('click');
   });
 
   socket.on('game_over', ({ room, finalEval }) => {

@@ -167,8 +167,8 @@ function appendTickerEvent(event) {
 
   ticker.insertBefore(item, ticker.firstChild);
 
-  // Keep max 8 items
-  while (ticker.children.length > 8) {
+  // Keep max 12 items so the stream fills the frame nicely
+  while (ticker.children.length > 12) {
     ticker.removeChild(ticker.lastChild);
   }
 

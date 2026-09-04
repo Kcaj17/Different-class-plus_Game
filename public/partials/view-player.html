@@ -230,6 +230,14 @@
           กำลังรอเพื่อนร่วมกลุ่ม หรือรอผู้ดำเนินรายการเปิดรอบถัดไป...
         </p>
 
+        <!-- Disconnected player notification & Instant Bot Takeover Action -->
+        <div id="post-roll-disconnected-alert" class="hidden" style="margin-top: 12px; padding: 10px 14px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px;">
+          <div id="post-roll-disconnected-msg" style="color: #fca5a5; font-size: 0.8rem; margin-bottom: 8px;">⚠️ มีเพื่อนร่วมกลุ่มขาดการเชื่อมต่อ</div>
+          <button id="btn-force-bot-takeover" class="btn-secondary" style="font-size: 0.8rem; padding: 6px 14px; background: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; cursor: pointer;">
+            <span>🤖 ให้บอทช่วยเล่นแทนคนที่หลุดทันที</span>
+          </button>
+        </div>
+
         <!-- Standalone / Host Quick Advance Button (Shown when all 10/10 have rolled) -->
         <div id="post-roll-advance-action" class="hidden" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1);">
           <button id="btn-district-advance" class="btn-primary btn-small" style="font-size: 0.84rem; padding: 8px 18px; background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 4px 14px rgba(16,185,129,0.35);">

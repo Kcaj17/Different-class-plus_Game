@@ -8,11 +8,13 @@ const { calculateLorenzAndGini } = require('./economicsEngine');
 const { secureRandomD20 } = require('../utils/security');
 
 // Process a single DND Action + D20 Roll from a player
-function resolvePlayerDndRoll(room, player, actionId) {
+function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
   const roundInfo = room.currentRoundData || ROUNDS_DATA[room.round - 1];
   
-  // Anti-Cheat: Server generates cryptographically secure D20 roll
-  const d20 = secureRandomD20();
+  // Anti-Cheat: Server generates cryptographically secure D20 roll unless explicitly forced by simulator
+  const d20 = (typeof forcedD20 === 'number' && forcedD20 >= 1 && forcedD20 <= 20)
+    ? forcedD20
+    : secureRandomD20();
 
   // Determine relevant stat and DC based on role & action
   let relevantStatKey = 'lab';
@@ -366,36 +368,57 @@ function getRandomActionForRole(roleType) {
 
 // Auto-roll D20 for AI bots (100% Pure Random Actions & Simulated D20)
 function autoRollDistrictBots(room) {
+  const currentRoundActions = (room.roundActions && room.roundActions[room.round]) 
+    || (THEMATIC_ROUND_ACTIONS && THEMATIC_ROUND_ACTIONS[room.round]);
+
   room.players.forEach(p => {
     if (!p.isBot) return;
+    if (p.hasRolledThisRound) return; // Prevent multiple rolls in same round
 
-    // Pure Random Action Choice
-    const botAction = getRandomActionForRole(p.roleType);
+    let botAction = null;
+    if (currentRoundActions && currentRoundActions[p.roleType] && currentRoundActions[p.roleType].length > 0) {
+      const pool = currentRoundActions[p.roleType];
+      botAction = pool[Math.floor(Math.random() * pool.length)].id;
+    } else {
+      botAction = getRandomActionForRole(p.roleType);
+    }
+
     const simulatedD20 = Math.floor(Math.random() * 20) + 1;
-
     resolvePlayerDndRoll(room, p, botAction, simulatedD20);
   });
 }
 
 // Auto-Bot Takeover: Take over for human players who disconnected or timed out
-function autoTakeoverInactivePlayers(room) {
-  // Check which players have already rolled in this cycle
-  const currentRoundLogs = (room.d20Logs || []);
+function autoTakeoverInactivePlayers(room, forceAllInactive = false) {
+  const currentRoundActions = (room.roundActions && room.roundActions[room.round]) 
+    || (THEMATIC_ROUND_ACTIONS && THEMATIC_ROUND_ACTIONS[room.round]);
+
+  const takenOver = [];
 
   room.players.forEach(p => {
     if (p.isBot) return;
+    if (p.hasRolledThisRound) return; // Already completed action this round
 
-    // Check if player hasn't rolled yet or is marked disconnected
-    const hasRolled = p.lastD20Roll && p.lastD20Roll.round === room.round;
-    if (!hasRolled || p.isDisconnected) {
-      const botAction = getRandomActionForRole(p.roleType);
+    // Take over if player is marked disconnected OR if forced (e.g. before round advance)
+    if (p.isDisconnected || forceAllInactive) {
+      let chosenActionId = null;
+      if (currentRoundActions && currentRoundActions[p.roleType] && currentRoundActions[p.roleType].length > 0) {
+        const pool = currentRoundActions[p.roleType];
+        chosenActionId = pool[Math.floor(Math.random() * pool.length)].id;
+      } else {
+        chosenActionId = getRandomActionForRole(p.roleType);
+      }
+
       const simulatedD20 = Math.floor(Math.random() * 20) + 1;
-
-      const rollResult = resolvePlayerDndRoll(room, p, botAction, simulatedD20);
-      rollResult.outcomeDesc = `[Auto-Bot Takeover 🤖] ${rollResult.outcomeDesc}`;
-      p.lastActionDesc = `🤖 เล่นแทนอัตโนมัติ: ${rollResult.actionName}`;
+      const rollResult = resolvePlayerDndRoll(room, p, chosenActionId, simulatedD20);
+      rollResult.outcomeDesc = `[บอท 🤖 เล่นแทน] ${rollResult.outcomeDesc}`;
+      p.lastActionDesc = `🤖 บอทช่วยเล่นแทน: ${rollResult.actionName}`;
+      takenOver.push({ player: p, rollResult });
+      console.log(`[Auto-Bot Takeover] Bot rolled for ${p.name} (${p.className}) in ${room.districtName}: ${rollResult.actionName} (D20: ${simulatedD20})`);
     }
   });
+
+  return takenOver;
 }
 
 module.exports = {

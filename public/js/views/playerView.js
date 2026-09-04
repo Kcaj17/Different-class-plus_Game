@@ -288,6 +288,25 @@ export function updatePostRollWaitingState(room, player) {
     }
   }
 
+  // Check for any unrolled disconnected human players
+  const unrolledDisconnected = (currentRoom && currentRoom.players)
+    ? currentRoom.players.filter(p => !p.isBot && p.isDisconnected && !p.hasRolledThisRound)
+    : [];
+
+  const disconnectedAlert = document.getElementById('post-roll-disconnected-alert');
+  const disconnectedMsg = document.getElementById('post-roll-disconnected-msg');
+  if (disconnectedAlert) {
+    if (unrolledDisconnected.length > 0 && !isAllRolled) {
+      disconnectedAlert.classList.remove('hidden');
+      if (disconnectedMsg) {
+        const names = unrolledDisconnected.map(p => p.name).join(', ');
+        disconnectedMsg.innerHTML = `⚠️ มีเพื่อนในกลุ่มขาดการเชื่อมต่อ (${names}) สามารถกดปุ่มเพื่อให้บอทช่วยเล่นแทนได้ทันที`;
+      }
+    } else {
+      disconnectedAlert.classList.add('hidden');
+    }
+  }
+
   // Also sync the Party Roster button in top HUD
   const btnParty = document.getElementById('btn-open-party-roster');
   if (btnParty) {
@@ -628,6 +647,24 @@ function setupStageNavigation() {
         btnDistrictAdvance.disabled = false;
         btnDistrictAdvance.innerHTML = '<span>🚩 สรุปผลและเปิดรอบถัดไปทันที ➔</span>';
       }, 2000);
+    });
+  }
+
+  // Force Bot Takeover for Disconnected Players Button
+  const btnTakeover = document.getElementById('btn-force-bot-takeover');
+  if (btnTakeover && !btnTakeover.dataset.hasListener) {
+    btnTakeover.dataset.hasListener = 'true';
+    btnTakeover.addEventListener('click', () => {
+      playSound('click');
+      btnTakeover.disabled = true;
+      btnTakeover.innerHTML = '<span>⏳ กำลังส่งบอทเข้าช่วยเล่น...</span>';
+      if (socket) {
+        socket.emit('district:takeover_disconnected');
+      }
+      setTimeout(() => {
+        btnTakeover.disabled = false;
+        btnTakeover.innerHTML = '<span>🤖 ให้บอทช่วยเล่นแทนคนที่หลุดทันที</span>';
+      }, 2500);
     });
   }
 }
@@ -986,18 +1023,28 @@ export function openPartyRosterModal() {
     listContainer.innerHTML = room.players.map((p, idx) => {
       const isMe = state.myPlayer && p.id === state.myPlayer.id;
 
-      // Status badge: rolled vs planning
-      const statusBadge = p.hasRolledThisRound
-        ? `<span style="display: inline-flex; align-items: center; font-size: 0.7rem; padding: 1px 7px; border-radius: 12px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 500;">✅ ทอยแล้ว</span>`
-        : `<span style="display: inline-flex; align-items: center; font-size: 0.7rem; padding: 1px 7px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 500;">⏳ กำลังวางแผน</span>`;
+      // Status badge: rolled vs planning vs disconnected
+      let statusBadge = '';
+      if (p.hasRolledThisRound) {
+        const isBotRoll = p.lastActionDesc && p.lastActionDesc.includes('บอทช่วยเล่นแทน');
+        statusBadge = isBotRoll
+          ? `<span style="display: inline-flex; align-items: center; font-size: 0.7rem; padding: 1px 7px; border-radius: 12px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 500;">🤖 บอทเล่นแทนแล้ว</span>`
+          : `<span style="display: inline-flex; align-items: center; font-size: 0.7rem; padding: 1px 7px; border-radius: 12px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 500;">✅ ทอยแล้ว</span>`;
+      } else if (p.isDisconnected && !p.isBot) {
+        statusBadge = `<span style="display: inline-flex; align-items: center; font-size: 0.7rem; padding: 1px 7px; border-radius: 12px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 500;">⚠️ หลุดการเชื่อมต่อ</span>`;
+      } else {
+        statusBadge = `<span style="display: inline-flex; align-items: center; font-size: 0.7rem; padding: 1px 7px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 500;">⏳ กำลังวางแผน</span>`;
+      }
 
       // Role tag: Bot or Me
       const roleBadge = p.isBot
         ? `<span style="font-size: 0.68rem; padding: 1px 5px; border-radius: 6px; background: rgba(148, 163, 184, 0.2); color: #94a3b8; margin-left: 4px;">🤖 บอท</span>`
         : (isMe ? `<span style="font-size: 0.68rem; padding: 1px 5px; border-radius: 6px; background: rgba(56, 189, 248, 0.25); color: #38bdf8; font-weight: bold; margin-left: 4px;">(คุณ)</span>` : '');
 
+      const borderColor = isMe ? '#10b981' : (p.hasRolledThisRound ? '#34d399' : (p.isDisconnected && !p.isBot ? '#ef4444' : '#f59e0b'));
+
       return `
-        <div class="party-player-item ${isMe ? 'party-me-highlight' : ''}" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 8px; margin-bottom: 7px; border-left: 3px solid ${isMe ? '#10b981' : (p.hasRolledThisRound ? '#34d399' : '#f59e0b')}; border-top: 1px solid rgba(255,255,255,0.04);">
+        <div class="party-player-item ${isMe ? 'party-me-highlight' : ''}" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 8px; margin-bottom: 7px; border-left: 3px solid ${borderColor}; border-top: 1px solid rgba(255,255,255,0.04);">
           <div style="display: flex; align-items: center; gap: 9px;">
             <span style="font-size: 1.3rem;">${p.avatar || '👤'}</span>
             <div>

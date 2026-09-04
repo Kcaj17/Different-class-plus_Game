@@ -27,6 +27,7 @@ const { createRateLimiter } = require('../utils/security');
 
 function registerSocketHandlers(io, rooms, options = {}) {
   const { getLocalIpAddress, QRCode, DEFAULT_PORT, verifyAdminPin } = options;
+  const disconnectTimers = new Map();
 
   // Background pre-generation for next round's AI dynamic actions
   function pregenerateNextRoundActions(room) {
@@ -208,7 +209,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
         if (room.status === 'playing' && room.players.length > 0) {
           currentRound = room.round;
           // Auto-takeover for any human player who timed out or disconnected
-          autoTakeoverInactivePlayers(room);
+          autoTakeoverInactivePlayers(room, true);
           // Pure Random actions & D20 rolls for bots
           autoRollDistrictBots(room);
           // Process settlement
@@ -333,6 +334,12 @@ function registerSocketHandlers(io, rooms, options = {}) {
         return;
       }
 
+      // Clear any pending disconnect takeover timer
+      if (disconnectTimers.has(player.id)) {
+        clearTimeout(disconnectTimers.get(player.id));
+        disconnectTimers.delete(player.id);
+      }
+
       // Re-bind player to this socket connection
       player.socketId = socket.id;
       player.isDisconnected = false;
@@ -394,6 +401,19 @@ function registerSocketHandlers(io, rooms, options = {}) {
       // Auto roll for any AI bots in this district that haven't rolled yet
       autoRollDistrictBots(room);
 
+      // Check if all connected human players in this district have now rolled.
+      // If so, take over any remaining disconnected players immediately!
+      const unrolledConnected = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
+      if (unrolledConnected.length === 0) {
+        const takenOver = autoTakeoverInactivePlayers(room);
+        autoRollDistrictBots(room);
+        if (takenOver.length > 0) {
+          io.to(roomCode).emit('room:bot_takeover', {
+            message: `🤖 บอทช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อ (${takenOver.map(t => t.player.name).join(', ')}) เรียบร้อยแล้ว`
+          });
+        }
+      }
+
       // Emit update to the district party
       io.to(roomCode).emit('room:updated', { room });
 
@@ -429,14 +449,32 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     // ---------------------------------------------------------
-    // DISTRICT CONTROLS (Advance Chapter & Fill Bots)
+    // DISTRICT CONTROLS (Advance Chapter, Bot Takeover, Fill Bots)
     // ---------------------------------------------------------
+    socket.on('district:takeover_disconnected', () => {
+      const roomCode = socket.roomCode;
+      if (!roomCode) return;
+      const room = rooms.get(roomCode);
+      if (!room || room.status !== 'playing') return;
+
+      const takenOver = autoTakeoverInactivePlayers(room);
+      autoRollDistrictBots(room);
+      io.to(roomCode).emit('room:updated', { room });
+      if (takenOver.length > 0) {
+        io.to(roomCode).emit('room:bot_takeover', {
+          message: `🤖 บอทเข้าช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อ (${takenOver.map(t => t.player.name).join(', ')}) ทันที!`
+        });
+      }
+    });
+
     socket.on('district:advance_round', () => {
       const roomCode = socket.roomCode;
       if (!roomCode) return;
       const room = rooms.get(roomCode);
       if (!room) return;
 
+      // Force auto-takeover for any inactive/disconnected players before advancing
+      autoTakeoverInactivePlayers(room, true);
       // Auto roll for AI bots before advancing
       autoRollDistrictBots(room);
 
@@ -571,9 +609,49 @@ function registerSocketHandlers(io, rooms, options = {}) {
           io.to(code).emit('room:player_disconnected', {
             playerId: player.id,
             name: player.name,
-            message: `⚠️ ${player.name} ขาดการเชื่อมต่อ (ระบบจะใช้บอท 🤖 ช่วยเล่นแทนอัตโนมัติหากหมดเวลา)`
+            message: `⚠️ ${player.name} ขาดการเชื่อมต่อ (ระบบจะใช้บอท 🤖 ช่วยเล่นแทนอัตโนมัติ)`
           });
           console.log(`[Player Marked Disconnected] ${player.name} in ${room.districtName}`);
+
+          if (room.status === 'playing') {
+            // Check if all remaining connected human players have already rolled
+            const unrolledConnected = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
+            
+            if (unrolledConnected.length === 0) {
+              // All connected players are already done rolling! Immediately take over so game doesn't stall!
+              console.log(`[Instant Takeover] All connected players already rolled in ${room.districtName}. Bot taking over for ${player.name}`);
+              const takenOver = autoTakeoverInactivePlayers(room);
+              autoRollDistrictBots(room);
+              io.to(code).emit('room:updated', { room });
+              if (takenOver.length > 0) {
+                io.to(code).emit('room:bot_takeover', {
+                  playerName: player.name,
+                  message: `🤖 บอทเข้าช่วยเล่นแทน ${player.name} ที่หลุดการเชื่อมต่อเรียบร้อยแล้ว`
+                });
+              }
+            } else {
+              // Start a 10s grace timeout before taking over for this player
+              if (disconnectTimers.has(player.id)) {
+                clearTimeout(disconnectTimers.get(player.id));
+              }
+              const timer = setTimeout(() => {
+                disconnectTimers.delete(player.id);
+                if (room.status === 'playing' && player.isDisconnected && !player.hasRolledThisRound) {
+                  console.log(`[Disconnect Timer Expired] Triggering bot takeover for ${player.name} in ${room.districtName}`);
+                  const takenOver = autoTakeoverInactivePlayers(room);
+                  autoRollDistrictBots(room);
+                  io.to(code).emit('room:updated', { room });
+                  if (takenOver.length > 0) {
+                    io.to(code).emit('room:bot_takeover', {
+                      playerName: player.name,
+                      message: `🤖 บอทเข้าช่วยเล่นแทน ${player.name} ที่หลุดการเชื่อมต่อเรียบร้อยแล้ว`
+                    });
+                  }
+                }
+              }, 10000); // 10 seconds grace period
+              disconnectTimers.set(player.id, timer);
+            }
+          }
           break;
         }
       }
