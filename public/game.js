@@ -123,42 +123,20 @@ function initEventListeners() {
     });
   }
 
-  // District Select Dropdown handler
-  const selectDistrict = document.getElementById('select-district-choice');
-  if (selectDistrict && customBox) {
-    selectDistrict.addEventListener('change', () => {
-      playSound('click');
-      if (selectDistrict.value === 'custom') {
-        customBox.classList.remove('hidden');
-        const roomInput = document.getElementById('input-room-code');
-        if (roomInput) roomInput.focus();
-      } else {
-        customBox.classList.add('hidden');
-      }
-    });
-  }
-
   // Quick Join Button (Single Click / QR Code destination for 200 players)
   const btnQuickJoin = document.getElementById('btn-quick-join-master');
   if (btnQuickJoin) {
     btnQuickJoin.addEventListener('click', () => {
       playSound('click');
       const nameInput = document.getElementById('input-player-name');
-      const roomInput = document.getElementById('input-room-code');
       const playerName = (nameInput ? nameInput.value : '').trim();
-      
-      let districtCode = selectDistrict ? selectDistrict.value : '';
-      if (districtCode === 'custom') {
-        districtCode = (roomInput ? roomInput.value : '').trim();
-      }
 
       btnQuickJoin.disabled = true;
       btnQuickJoin.innerHTML = '<span>⏳ กำลังจัดสรรกลุ่มและบทบาท...</span>';
 
       if (socket) {
         socket.emit('player:quick_join_master', {
-          playerName: playerName || `ผู้เล่น_${Math.floor(Math.random() * 900 + 100)}`,
-          districtCode: districtCode || null
+          playerName: playerName || `ผู้เล่น_${Math.floor(Math.random() * 900 + 100)}`
         });
       }
 
@@ -169,7 +147,7 @@ function initEventListeners() {
     });
   }
 
-  // Standard Join Room (Custom room code submit)
+  // Standard Join Room
   const btnJoin = document.getElementById('btn-join-room');
   if (btnJoin) {
     btnJoin.addEventListener('click', () => {
@@ -180,7 +158,7 @@ function initEventListeners() {
       const playerName = (nameInput ? nameInput.value : '').trim();
 
       if (!roomCode) {
-        showToast('กรุณากรอกรหัสห้อง เช่น DIST-02 หรือ 2', 'warning');
+        showToast('กรุณากรอกรหัสห้อง เช่น DIST-01 หรือกดเข้าร่วมด่วน', 'warning');
         return;
       }
 
@@ -193,10 +171,6 @@ function initEventListeners() {
           isProjector: false
         });
       }
-      setTimeout(() => {
-        btnJoin.disabled = false;
-        btnJoin.innerHTML = '<span>เข้าร่วมกลุ่มนี้</span>';
-      }, 2000);
     });
   }
 

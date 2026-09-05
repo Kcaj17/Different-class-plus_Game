@@ -10,6 +10,7 @@ const {
   generateRoomCode,
   createDistrictRoom,
   quickJoinMaster,
+  joinSpecificDistrict,
   fillDistrictBots,
   startDistrictWithBots,
   finalizeDistrictsAndBots,
@@ -293,18 +294,19 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     // ---------------------------------------------------------
-    // QUICK JOIN MASTER (Single QR Code for 200 Players / Specific District)
+    // QUICK JOIN MASTER (Single QR Code for 200 Players)
     // ---------------------------------------------------------
-    socket.on('player:quick_join_master', ({ playerName, districtCode, roomCode }) => {
-      const preferred = districtCode || roomCode || null;
-      const { room, player } = quickJoinMaster(playerName, socket.id, preferred);
+    socket.on('player:quick_join_master', ({ playerName }) => {
+      const { room, player, autoStarted } = quickJoinMaster(playerName, socket.id);
       socket.roomCode = room.code;
       socket.playerId = player.id;
       socket.join(room.code);
 
-      console.log(`[Quick Join] Player ${player.name} (${player.className}) assigned to ${room.districtName} (${room.code})`);
+      console.log(`[Quick Join] Player ${player.name} (${player.className}) assigned to ${room.districtName} (${room.code}) - Total: ${room.players.length}/10`);
 
       const currentRoundActions = getRoomRoundActions(room, room.round);
+
+      // Always initialize local player state & show character reveal card
       socket.emit('player:init', {
         room,
         myPlayer: player,
@@ -312,17 +314,36 @@ function registerSocketHandlers(io, rooms, options = {}) {
         roundActions: currentRoundActions
       });
 
-      io.to(room.code).emit('room:updated', { 
-        room,
-        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
-        roundActions: currentRoundActions
-      });
+      if (autoStarted) {
+        io.to(room.code).emit('room:started', {
+          room,
+          roundInfo: ROUNDS_DATA[0],
+          roundActions: currentRoundActions
+        });
+        io.to(room.code).emit('room:updated', { 
+          room,
+          roundInfo: ROUNDS_DATA[0],
+          roundActions: currentRoundActions
+        });
+        pregenerateNextRoundActions(room);
 
-      // Notify Master Screen of new player
-      broadcastNationalUpdate({
-        type: 'join',
-        message: `👤 ${player.name} เข้าร่วมเป็น "${player.className}" ใน ${room.districtName}`
-      });
+        broadcastNationalUpdate({
+          type: 'start',
+          message: `🚀 ${room.districtName} มีสมาชิกครบ 10 คนแล้ว! เริ่มต้นการจำลองเศรษฐกิจรอบที่ 1 ทันที`
+        });
+      } else {
+        io.to(room.code).emit('room:updated', { 
+          room,
+          roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+          roundActions: currentRoundActions
+        });
+
+        // Notify Master Screen of new player
+        broadcastNationalUpdate({
+          type: 'join',
+          message: `👤 ${player.name} เข้าร่วมเป็น "${player.className}" ใน ${room.districtName} (${room.players.length}/10 คน)`
+        });
+      }
     });
 
     // ---------------------------------------------------------
@@ -579,22 +600,12 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     socket.on('join_room', ({ roomCode, playerName, isProjector }) => {
-      let cleanCode = (roomCode || '').toUpperCase().trim();
-      // Normalize numeric formats: "2", "DIST-2", "DIST 02" -> "DIST-02"
-      const numMatch = cleanCode.match(/^(?:DIST[-\s]?)?(\d{1,2})$/i);
-      if (numMatch) {
-        const num = parseInt(numMatch[1], 10);
-        if (num >= 1 && num <= 20) {
-          const pad = num < 10 ? `0${num}` : `${num}`;
-          cleanCode = `DIST-${pad}`;
-        }
-      }
-
-      initializeMasterDistricts();
+      const cleanCode = (roomCode || '').toUpperCase().trim();
       let room = rooms.get(cleanCode);
 
       if (!room) {
-        room = createDistrictRoom(cleanCode);
+        socket.emit('join_error', 'ไม่พบห้องรหัสนี้ กรุณาตรวจสอบรหัสห้องอีกครั้ง');
+        return;
       }
 
       if (isProjector) {
@@ -605,23 +616,28 @@ function registerSocketHandlers(io, rooms, options = {}) {
         return;
       }
 
-      // Check existing player or assign role
+      // Check existing player or add to specific district
       let player = room.players.find(p => p.socketId === socket.id);
+      let autoStarted = false;
+
       if (!player) {
-        if (room.players.length >= 10) {
-          socket.emit('join_error', `ห้อง ${room.districtName} (${cleanCode}) มีผู้เล่นครบ 10 คนแล้ว`);
+        const result = joinSpecificDistrict(cleanCode, playerName, socket.id);
+        if (result.error) {
+          socket.emit('join_error', result.error);
           return;
         }
-        const result = quickJoinMaster(playerName, socket.id, cleanCode);
         room = result.room;
         player = result.player;
+        autoStarted = result.autoStarted;
       }
 
-      socket.roomCode = room.code;
+      socket.join(cleanCode);
+      socket.roomCode = cleanCode;
       socket.playerId = player.id;
-      socket.join(room.code);
 
       const currentRoundActions = getRoomRoundActions(room, room.round);
+
+      // Always initialize local player state & show character reveal card
       socket.emit('player:init', {
         room,
         myPlayer: player,
@@ -629,16 +645,35 @@ function registerSocketHandlers(io, rooms, options = {}) {
         roundActions: currentRoundActions
       });
 
-      io.to(room.code).emit('room:updated', { 
-        room,
-        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
-        roundActions: currentRoundActions
-      });
+      if (autoStarted) {
+        io.to(cleanCode).emit('room:started', {
+          room,
+          roundInfo: ROUNDS_DATA[0],
+          roundActions: currentRoundActions
+        });
+        io.to(cleanCode).emit('room:updated', { 
+          room,
+          roundInfo: ROUNDS_DATA[0],
+          roundActions: currentRoundActions
+        });
+        pregenerateNextRoundActions(room);
 
-      broadcastNationalUpdate({
-        type: 'join',
-        message: `👤 ${player.name} เข้าร่วมเป็น "${player.className}" ใน ${room.districtName}`
-      });
+        broadcastNationalUpdate({
+          type: 'start',
+          message: `🚀 ${room.districtName} มีสมาชิกครบ 10 คนแล้ว! เริ่มต้นการจำลองเศรษฐกิจรอบที่ 1 ทันที`
+        });
+      } else {
+        io.to(cleanCode).emit('room:updated', { 
+          room,
+          roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+          roundActions: currentRoundActions
+        });
+
+        broadcastNationalUpdate({
+          type: 'join',
+          message: `👤 ${player.name} เข้าร่วมเป็น "${player.className}" ใน ${room.districtName} (${room.players.length}/10 คน)`
+        });
+      }
     });
 
     // Disconnect & Mark Player for Auto-Bot Takeover

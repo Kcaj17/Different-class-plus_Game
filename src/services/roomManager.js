@@ -37,16 +37,10 @@ function generateRoomCode() {
 
 // Create a District Room (DND Economic Party)
 function createDistrictRoom(roomCode, districtIndex = 1, hostSocketId = null) {
-  let idx = districtIndex;
-  const numMatch = (roomCode || '').match(/^DIST-(\d+)$/i);
-  if (numMatch) {
-    idx = parseInt(numMatch[1], 10);
-  }
-
   const room = {
     code: roomCode,
-    districtIndex: idx,
-    districtName: `เขตเศรษฐกิจที่ ${idx}`,
+    districtIndex: districtIndex,
+    districtName: `เขตเศรษฐกิจที่ ${districtIndex}`,
     hostSocketId: hostSocketId,
     status: 'waiting', // Wait in assembly hall until 10 players or bots fill
     round: 1,
@@ -114,93 +108,15 @@ function getMasterGameProgress() {
   };
 }
 
-// Auto-Matchmaking / Specific District Join:
-// 1. If preferredDistrictCode is provided and has space, player joins that exact district!
-// 2. Otherwise, consolidate humans sequentially: Fill District 1 -> District 2 -> etc.
-function quickJoinMaster(playerName, socketId, preferredDistrictCode = null) {
-  initializeMasterDistricts();
-
-  const gameStarted = isMasterGameStarted();
-  let targetRoom = null;
-
-  // 1. Direct Selection: User specified a preferred district (e.g. DIST-02, 3, DIST-15)
-  if (preferredDistrictCode && typeof preferredDistrictCode === 'string' && preferredDistrictCode.trim() !== '') {
-    let cleanCode = preferredDistrictCode.toUpperCase().trim();
-    // Normalize numeric formats: "2", "DIST-2", "DIST 02" -> "DIST-02"
-    const numMatch = cleanCode.match(/^(?:DIST[-\s]?)?(\d{1,2})$/i);
-    if (numMatch) {
-      const num = parseInt(numMatch[1], 10);
-      if (num >= 1 && num <= TOTAL_DISTRICTS) {
-        const pad = num < 10 ? `0${num}` : `${num}`;
-        cleanCode = `DIST-${pad}`;
-      }
-    }
-
-    let room = rooms.get(cleanCode);
-    if (!room) {
-      room = createDistrictRoom(cleanCode);
-    }
-
-    if (room.players.length < PLAYERS_PER_DISTRICT) {
-      targetRoom = room;
-    }
-  }
-
-  // 2. Matchmaking fallback: Auto-assign to first open district
-  if (!targetRoom) {
-    if (!gameStarted) {
-      // Lobby / Pre-Game: Consolidate humans sequentially (DIST-01 -> DIST-02 -> ...)
-      for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-        const pad = i < 10 ? `0${i}` : `${i}`;
-        const code = `DIST-${pad}`;
-        const room = rooms.get(code);
-        if (!room) continue;
-
-        if (room.players.length < PLAYERS_PER_DISTRICT) {
-          targetRoom = room;
-          break;
-        }
-      }
-    } else {
-      // In-Game: Skip districts that are already playing and full (10 players)
-      for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-        const pad = i < 10 ? `0${i}` : `${i}`;
-        const code = `DIST-${pad}`;
-        const room = rooms.get(code);
-        if (!room) continue;
-
-        if (room.status === 'playing' && room.players.length >= PLAYERS_PER_DISTRICT) {
-          continue;
-        }
-
-        targetRoom = room;
-        break;
-      }
-    }
-  }
-
-  if (!targetRoom) {
-    // If all 20 districts are completely filled with 10 players, fallback to dynamic district
-    const fallbackCode = generateRoomCode();
-    targetRoom = createDistrictRoom(fallbackCode, rooms.size + 1);
-  }
-
-  // If game is already in progress, synchronize and activate the target district
-  if (gameStarted && targetRoom.status !== 'playing') {
-    const progress = getMasterGameProgress();
-    targetRoom.status = 'playing';
-    targetRoom.round = progress.round;
-    targetRoom.phase = progress.phase;
-    targetRoom.currentRoundData = progress.currentRoundData;
-  }
-
+// Helper: Add player to a specific district room with role assignment and auto-start check
+function addPlayerToDistrictRoom(room, playerName, socketId) {
   // Ensure available roles are initialized
-  if (!targetRoom.availableRoles || targetRoom.availableRoles.length === 0) {
-    targetRoom.availableRoles = shuffleArray(JSON.parse(JSON.stringify(ROLE_TEMPLATES)));
+  if (!room.availableRoles || room.availableRoles.length === 0) {
+    room.availableRoles = shuffleArray(JSON.parse(JSON.stringify(ROLE_TEMPLATES)));
   }
 
   // Assign random role based on Rawlsian Veil of Ignorance
-  const roleTemplate = targetRoom.availableRoles.pop();
+  const roleTemplate = room.availableRoles.pop();
 
   const cleanName = sanitizeText(playerName, 24);
   const player = {
@@ -222,24 +138,82 @@ function quickJoinMaster(playerName, socketId, preferredDistrictCode = null) {
     hasRolledThisRound: false
   };
 
-  targetRoom.players.push(player);
+  room.players.push(player);
 
-  // If target district is active/playing, auto-fill remaining slots with bots up to exactly 10 players
-  // so the district is complete and ready for national macro settlement
-  if (targetRoom.status === 'playing') {
-    fillDistrictBots(targetRoom);
-    targetRoom.players.forEach(p => {
-      if (p.isBot) {
-        p.hasRolledThisRound = false;
-      }
-    });
+  let autoStarted = false;
+
+  // Auto-Start: If this room reaches 10 players, start playing automatically!
+  if (room.players.length >= PLAYERS_PER_DISTRICT) {
+    room.status = 'playing';
+    room.round = 1;
+    room.phase = 'action';
+    room.currentRoundData = ROUNDS_DATA[0];
+    room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
+    autoStarted = true;
   }
 
   // Recalculate Lorenz & Gini
-  const eco = calculateLorenzAndGini(targetRoom.players);
-  targetRoom.macroStats.gini = eco.gini;
+  const eco = calculateLorenzAndGini(room.players);
+  room.macroStats.gini = eco.gini;
 
-  return { room: targetRoom, player };
+  return { player, autoStarted };
+}
+
+// Auto-Matchmaking: Consolidate Humans First (Fill District 1 -> 2 -> 3...)
+// Rules:
+// 1. Fill sequentially: District 1 (up to 10) -> District 2 -> District 3...
+// 2. If a district has already started ('playing' or 'gameover') or is full (>= 10), SKIP IT and go to the next waiting district.
+function quickJoinMaster(playerName, socketId) {
+  initializeMasterDistricts();
+
+  let targetRoom = null;
+
+  for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
+    const pad = i < 10 ? `0${i}` : `${i}`;
+    const code = `DIST-${pad}`;
+    const room = rooms.get(code);
+    if (!room) continue;
+
+    // Room must still be in waiting status AND have room for more players (< 10)
+    if (room.status === 'waiting' && room.players.length < PLAYERS_PER_DISTRICT) {
+      targetRoom = room;
+      break;
+    }
+  }
+
+  if (!targetRoom) {
+    // If all 20 districts are completely filled or playing, fallback to a dynamic district
+    const fallbackCode = generateRoomCode();
+    targetRoom = createDistrictRoom(fallbackCode, rooms.size + 1);
+  }
+
+  const { player, autoStarted } = addPlayerToDistrictRoom(targetRoom, playerName, socketId);
+
+  return { room: targetRoom, player, autoStarted };
+}
+
+// Join a specific district manually (e.g. typing DIST-02)
+function joinSpecificDistrict(roomCode, playerName, socketId) {
+  initializeMasterDistricts();
+
+  const cleanCode = (roomCode || '').toUpperCase().trim();
+  let room = rooms.get(cleanCode);
+
+  if (!room) {
+    return { error: 'ไม่พบห้องรหัสนี้ กรุณาตรวจสอบรหัสห้องอีกครั้ง' };
+  }
+
+  if (room.status !== 'waiting') {
+    return { error: `กลุ่ม ${room.districtName} (${cleanCode}) ได้เริ่มเล่นไปแล้ว ไม่สามารถเข้าร่วมได้` };
+  }
+
+  if (room.players.length >= PLAYERS_PER_DISTRICT) {
+    return { error: `กลุ่ม ${room.districtName} (${cleanCode}) มีสมาชิกครบ 10 คนแล้ว กรุณาเลือกกลุ่มอื่นหรือใช้การสุ่มกลุ่ม` };
+  }
+
+  const { player, autoStarted } = addPlayerToDistrictRoom(room, playerName, socketId);
+
+  return { room, player, autoStarted };
 }
 
 // Auto-fill district with bot adventurers if requested or needed
@@ -445,6 +419,7 @@ module.exports = {
   generateRoomCode,
   createDistrictRoom,
   quickJoinMaster,
+  joinSpecificDistrict,
   fillDistrictBots,
   startDistrictWithBots,
   finalizeDistrictsAndBots,
