@@ -9,6 +9,7 @@ const {
   rooms,
   generateRoomCode,
   createDistrictRoom,
+  createCustomDistrict,
   quickJoinMaster,
   joinSpecificDistrict,
   fillDistrictBots,
@@ -347,6 +348,40 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     // ---------------------------------------------------------
+    // CREATE CUSTOM ROOM (Play with Friends)
+    // ---------------------------------------------------------
+    socket.on('player:create_custom_room', ({ playerName, customCode } = {}) => {
+      const { room, player, autoStarted } = createCustomDistrict(playerName, socket.id, customCode);
+      socket.roomCode = room.code;
+      socket.playerId = player.id;
+      socket.join(room.code);
+
+      console.log(`[Create Room] Player ${player.name} created new district ${room.districtName} (${room.code})`);
+
+      const currentRoundActions = getRoomRoundActions(room, room.round);
+
+      socket.emit('player:init', {
+        room,
+        myPlayer: player,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
+      });
+
+      socket.emit('room:created', { roomCode: room.code, room });
+
+      io.to(room.code).emit('room:updated', {
+        room,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
+      });
+
+      broadcastNationalUpdate({
+        type: 'create',
+        message: `🏠 สร้าง ${room.districtName} (${room.code}) ใหม่ โดย ${player.name}`
+      });
+    });
+
+    // ---------------------------------------------------------
     // PLAYER RECONNECT (Seamless session restore on refresh)
     // ---------------------------------------------------------
     socket.on('player:reconnect', ({ playerId, roomCode }) => {
@@ -404,83 +439,88 @@ function registerSocketHandlers(io, rooms, options = {}) {
     // ---------------------------------------------------------
     // D20 ROLL & ACTION RESOLUTION
     // ---------------------------------------------------------
-    socket.on('player:roll_d20', async ({ actionId }) => {
-      const roomCode = socket.roomCode;
-      const playerId = socket.playerId;
-      if (!roomCode || !playerId) {
-        socket.emit('roll_error', 'ไม่พบข้อมูลผู้เล่นหรือห้อง');
-        return;
-      }
-
-      const room = rooms.get(roomCode);
-      if (!room) return;
-
-      const player = room.players.find(p => p.id === playerId);
-      if (!player) return;
-
-      // Security: Anti-Cheat — prevent duplicate rolls in the same round
-      if (player.hasRolledThisRound) {
-        socket.emit('roll_error', 'คุณได้ทอยเต๋าในไตรมาสนี้ไปแล้ว กรุณารอเข้าสู่ไตรมาสถัดไป');
-        return;
-      }
-
-      // 1. Resolve D20 and economic math immediately (Server is dice authority)
-      const rollResult = resolvePlayerDndRoll(room, player, actionId);
-
-      // Emit instant resolution to player
-      socket.emit('player:roll_resolved', {
-        rollResult,
-        myPlayer: player,
-        roomMacro: room.macroStats
-      });
-
-      // Auto roll for any AI bots in this district that haven't rolled yet
-      autoRollDistrictBots(room);
-
-      // Check if all connected human players in this district have now rolled.
-      // If so, take over any remaining disconnected players immediately!
-      const unrolledConnected = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
-      if (unrolledConnected.length === 0) {
-        const takenOver = autoTakeoverInactivePlayers(room);
-        autoRollDistrictBots(room);
-        if (takenOver.length > 0) {
-          io.to(roomCode).emit('room:bot_takeover', {
-            message: `🤖 บอทช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อ (${takenOver.map(t => t.player.name).join(', ')}) เรียบร้อยแล้ว`
-          });
-        }
-      }
-
-      // Emit update to the district party
-      io.to(roomCode).emit('room:updated', { room });
-
-      // Prepare Live Ticker notification for Master Screen
-      let tickerMsg = `${player.name} (${room.districtName}): ${rollResult.outcomeTitle}`;
-      if (rollResult.isNat20) {
-        tickerMsg = `🎉 [ได้ 20 แต้มเต็ม!] ${player.name} (${room.districtName}) ทำตามแผน ${rollResult.actionName} ได้ผลยอดเยี่ยมมาก!`;
-      } else if (rollResult.isNat1) {
-        tickerMsg = `⚠️ [ได้ 1 แต้ม!] ${player.name} (${room.districtName}) พบอุปสรรคและต้นทุนสูงขึ้นในการ ${rollResult.actionName}`;
-      } else if (room.macroStats.crisisAlert) {
-        tickerMsg = `🚨 ${room.districtName} เข้าสู่ภาวะวิกฤต! ${room.macroStats.crisisAlert}`;
-      }
-
-      broadcastNationalUpdate({
-        type: rollResult.isNat20 ? 'nat20' : (rollResult.isNat1 ? 'nat1' : 'roll'),
-        message: tickerMsg,
-        rollResult
-      });
-
-      // 2. Asynchronously generate personalized AI GM lore
+    socket.on('player:roll_d20', async ({ actionId } = {}) => {
       try {
-        const aiLore = await generateIndividualDndLore(player, rollResult, {
-          name: room.districtName,
-          round: room.round,
-          gini: room.macroStats.gini,
-          debtToGdp: room.macroStats.debtToGdp
+        const roomCode = socket.roomCode;
+        const playerId = socket.playerId;
+        if (!roomCode || !playerId) {
+          socket.emit('roll_error', 'ไม่พบข้อมูลผู้เล่นหรือห้อง');
+          return;
+        }
+
+        const room = rooms.get(roomCode);
+        if (!room) return;
+
+        const player = room.players.find(p => p.id === playerId);
+        if (!player) return;
+
+        // Security: Anti-Cheat — prevent duplicate rolls in the same round
+        if (player.hasRolledThisRound) {
+          socket.emit('roll_error', 'คุณได้ทอยเต๋าในไตรมาสนี้ไปแล้ว กรุณารอเข้าสู่ไตรมาสถัดไป');
+          return;
+        }
+
+        // 1. Resolve D20 and economic math immediately (Server is dice authority)
+        const rollResult = resolvePlayerDndRoll(room, player, actionId);
+
+        // Emit instant resolution to player
+        socket.emit('player:roll_resolved', {
+          rollResult,
+          myPlayer: player,
+          roomMacro: room.macroStats
         });
-        player.lastAiLore = aiLore;
-        socket.emit('player:ai_lore', { aiLore });
+
+        // Auto roll for any AI bots in this district that haven't rolled yet
+        autoRollDistrictBots(room);
+
+        // Check if all connected human players in this district have now rolled.
+        // If so, take over any remaining disconnected players immediately!
+        const unrolledConnected = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
+        if (unrolledConnected.length === 0) {
+          const takenOver = autoTakeoverInactivePlayers(room);
+          autoRollDistrictBots(room);
+          if (takenOver.length > 0) {
+            io.to(roomCode).emit('room:bot_takeover', {
+              message: `🤖 บอทช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อ (${takenOver.map(t => t.player.name).join(', ')}) เรียบร้อยแล้ว`
+            });
+          }
+        }
+
+        // Emit update to the district party
+        io.to(roomCode).emit('room:updated', { room });
+
+        // Prepare Live Ticker notification for Master Screen
+        let tickerMsg = `${player.name} (${room.districtName}): ${rollResult.outcomeTitle}`;
+        if (rollResult.isNat20) {
+          tickerMsg = `🎉 [ได้ 20 แต้มเต็ม!] ${player.name} (${room.districtName}) ทำตามแผน ${rollResult.actionName} ได้ผลยอดเยี่ยมมาก!`;
+        } else if (rollResult.isNat1) {
+          tickerMsg = `⚠️ [ได้ 1 แต้ม!] ${player.name} (${room.districtName}) พบอุปสรรคและต้นทุนสูงขึ้นในการ ${rollResult.actionName}`;
+        } else if (room.macroStats.crisisAlert) {
+          tickerMsg = `🚨 ${room.districtName} เข้าสู่ภาวะวิกฤต! ${room.macroStats.crisisAlert}`;
+        }
+
+        broadcastNationalUpdate({
+          type: rollResult.isNat20 ? 'nat20' : (rollResult.isNat1 ? 'nat1' : 'roll'),
+          message: tickerMsg,
+          rollResult
+        });
+
+        // 2. Asynchronously generate personalized AI GM lore
+        try {
+          const aiLore = await generateIndividualDndLore(player, rollResult, {
+            name: room.districtName,
+            round: room.round,
+            gini: room.macroStats.gini,
+            debtToGdp: room.macroStats.debtToGdp
+          });
+          player.lastAiLore = aiLore;
+          socket.emit('player:ai_lore', { aiLore });
+        } catch (err) {
+          console.error('AI Lore error:', err);
+        }
       } catch (err) {
-        console.error('AI Lore error:', err);
+        console.error('[Roll Handler] Error processing D20 roll:', err);
+        socket.emit('roll_error', 'เกิดข้อผิดพลาดในการประมวลผลการทอยเต๋า กรุณาลองใหม่อีกครั้ง');
       }
     });
 

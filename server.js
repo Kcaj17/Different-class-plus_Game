@@ -13,12 +13,11 @@ const {
   rooms,
   generateRoomCode,
   createDistrictRoom,
+  createCustomDistrict,
   quickJoinMaster,
   getNationalAggregates,
-  initializeMasterDistricts,
   finalizeDistrictsAndBots,
-  MASTER_SESSION_CODE,
-  TOTAL_DISTRICTS
+  MASTER_SESSION_CODE
 } = require('./src/services/roomManager');
 const { registerSocketHandlers } = require('./src/socket/socketHandlers');
 const { verifyAdminPin, createRateLimiter } = require('./src/utils/security');
@@ -62,9 +61,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 app.use(express.json());
-
-// Pre-initialize 20 Economic Districts (Parties 1..20)
-initializeMasterDistricts();
 
 // Port configuration with fallback
 const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT) : 3005;
@@ -151,9 +147,9 @@ if (require.main === module) {
     console.log(` ⚔️  D&D Economic Chronicles: ไทยช่วยไทยพลัส 60/40  ⚔️`);
     console.log(` Localhost URL: http://localhost:${DEFAULT_PORT}`);
     console.log(` 📶 Wi-Fi / LAN URL (สำหรับมือถือ): http://${localIp}:${DEFAULT_PORT}/?view=player`);
-    console.log(` 🖥️  Master Screen (200 Players): http://localhost:${DEFAULT_PORT}/?view=master`);
+    console.log(` 🖥️  Master Screen: http://localhost:${DEFAULT_PORT}/?view=master`);
     console.log(` 📱 Mobile Player Quick Join: http://${localIp}:${DEFAULT_PORT}/?view=player`);
-    console.log(` 🗺️  Districts Initialized: ${TOTAL_DISTRICTS} Districts (Capacity 200 Players)`);
+    console.log(` 🗺️  Districts: Dynamic On-Demand Architecture`);
     console.log(` 🤖 AI Dungeon Master: ${isAIEnabled() ? '✅ ENABLED (Gemini 3.7 Flash)' : '⚠️  FALLBACK (Dynamic Lore Templates)'}`);
     console.log(`=======================================================`);
   });
@@ -172,6 +168,7 @@ module.exports = {
   processDistrictSettlement,
   generateRoomCode,
   createDistrictRoom,
+  createCustomDistrict,
   quickJoinMaster,
   getNationalAggregates,
   finalizeDistrictsAndBots,

@@ -1,6 +1,6 @@
 // =========================================================
-// roomManager.js — D&D Economic Chronicles: District & Matchmaking Manager
-// Supports 200 Players (20 Districts x 10 Players) + Master Screen
+// roomManager.js — D&D Economic Chronicles: Dynamic On-Demand District Manager
+// Supports Dynamic Unlimited Districts & Players + Master Screen
 // =========================================================
 
 const { ROLE_TEMPLATES, ROUNDS_DATA, THEMATIC_ROUND_ACTIONS } = require('../constants/gameData');
@@ -11,19 +11,25 @@ const { sanitizeText } = require('../utils/security');
 const rooms = new Map();
 
 // Master Session Configuration
-const MASTER_SESSION_CODE = 'ECO-200';
-const TOTAL_DISTRICTS = 20;
+const MASTER_SESSION_CODE = 'ECO-MASTER';
 const PLAYERS_PER_DISTRICT = 10;
 
-// Initialize the 20 Economic Districts (Districts 1..20)
-function initializeMasterDistricts() {
-  for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-    const pad = i < 10 ? `0${i}` : `${i}`;
+// Find the next sequential district code (DIST-01, DIST-02, DIST-03...)
+function getNextDistrictCode() {
+  let index = 1;
+  while (true) {
+    const pad = index < 10 ? `0${index}` : `${index}`;
     const code = `DIST-${pad}`;
     if (!rooms.has(code)) {
-      createDistrictRoom(code, i);
+      return { code, index };
     }
+    index++;
   }
+}
+
+// Optional legacy helper: initialize empty districts if needed
+function initializeMasterDistricts() {
+  // On-demand architecture: no empty districts pre-created
 }
 
 function generateRoomCode() {
@@ -36,13 +42,22 @@ function generateRoomCode() {
 }
 
 // Create a District Room (DND Economic Party)
-function createDistrictRoom(roomCode, districtIndex = 1, hostSocketId = null) {
+function createDistrictRoom(roomCode, districtIndex = null, hostSocketId = null) {
+  let calculatedIndex = districtIndex;
+  if (!calculatedIndex && typeof roomCode === 'string' && roomCode.startsWith('DIST-')) {
+    const numPart = parseInt(roomCode.replace('DIST-', ''), 10);
+    if (!isNaN(numPart)) calculatedIndex = numPart;
+  }
+  if (!calculatedIndex) {
+    calculatedIndex = rooms.size + 1;
+  }
+
   const room = {
     code: roomCode,
-    districtIndex: districtIndex,
-    districtName: `เขตเศรษฐกิจที่ ${districtIndex}`,
+    districtIndex: calculatedIndex,
+    districtName: `เขตเศรษฐกิจที่ ${calculatedIndex}`,
     hostSocketId: hostSocketId,
-    status: 'waiting', // Wait in assembly hall until 10 players or bots fill
+    status: 'waiting', // Wait in assembly hall until 10 players or started
     round: 1,
     maxRounds: 6,
     phase: 'action', // 'lore' | 'action' | 'settlement' | 'dashboard'
@@ -159,32 +174,22 @@ function addPlayerToDistrictRoom(room, playerName, socketId) {
   return { player, autoStarted };
 }
 
-// Auto-Matchmaking: Consolidate Humans First (Fill District 1 -> 2 -> 3...)
-// Rules:
-// 1. Fill sequentially: District 1 (up to 10) -> District 2 -> District 3...
-// 2. If a district has already started ('playing' or 'gameover') or is full (>= 10), SKIP IT and go to the next waiting district.
+// Auto-Matchmaking: Consolidate Humans First into waiting rooms (< 10), otherwise dynamically create new room
 function quickJoinMaster(playerName, socketId) {
-  initializeMasterDistricts();
-
   let targetRoom = null;
 
-  for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-    const pad = i < 10 ? `0${i}` : `${i}`;
-    const code = `DIST-${pad}`;
-    const room = rooms.get(code);
-    if (!room) continue;
-
-    // Room must still be in waiting status AND have room for more players (< 10)
+  // 1. Search for an open waiting district (< 10 players)
+  for (const room of rooms.values()) {
     if (room.status === 'waiting' && room.players.length < PLAYERS_PER_DISTRICT) {
       targetRoom = room;
       break;
     }
   }
 
+  // 2. If no open waiting room exists (or all existing rooms are full / playing), dynamically create a new sequential district
   if (!targetRoom) {
-    // If all 20 districts are completely filled or playing, fallback to a dynamic district
-    const fallbackCode = generateRoomCode();
-    targetRoom = createDistrictRoom(fallbackCode, rooms.size + 1);
+    const { code, index } = getNextDistrictCode();
+    targetRoom = createDistrictRoom(code, index);
   }
 
   const { player, autoStarted } = addPlayerToDistrictRoom(targetRoom, playerName, socketId);
@@ -192,15 +197,37 @@ function quickJoinMaster(playerName, socketId) {
   return { room: targetRoom, player, autoStarted };
 }
 
-// Join a specific district manually (e.g. typing DIST-02)
-function joinSpecificDistrict(roomCode, playerName, socketId) {
-  initializeMasterDistricts();
+// Create a new custom district (for playing with friends)
+function createCustomDistrict(playerName, socketId, customCode = null) {
+  let targetCode = null;
+  let targetIndex = null;
 
+  if (customCode) {
+    const clean = sanitizeText(customCode, 8).toUpperCase().trim();
+    if (clean && !rooms.has(clean)) {
+      targetCode = clean;
+    }
+  }
+
+  if (!targetCode) {
+    const next = getNextDistrictCode();
+    targetCode = next.code;
+    targetIndex = next.index;
+  }
+
+  const targetRoom = createDistrictRoom(targetCode, targetIndex, socketId);
+  const { player, autoStarted } = addPlayerToDistrictRoom(targetRoom, playerName, socketId);
+
+  return { room: targetRoom, player, autoStarted };
+}
+
+// Join a specific district manually (e.g. typing DIST-02 or custom room code)
+function joinSpecificDistrict(roomCode, playerName, socketId) {
   const cleanCode = (roomCode || '').toUpperCase().trim();
   let room = rooms.get(cleanCode);
 
   if (!room) {
-    return { error: 'ไม่พบห้องรหัสนี้ กรุณาตรวจสอบรหัสห้องอีกครั้ง' };
+    return { error: `ไม่พบห้องรหัส "${cleanCode}" กรุณาตรวจสอบรหัสห้องอีกครั้ง` };
   }
 
   if (room.status !== 'waiting') {
@@ -208,7 +235,7 @@ function joinSpecificDistrict(roomCode, playerName, socketId) {
   }
 
   if (room.players.length >= PLAYERS_PER_DISTRICT) {
-    return { error: `กลุ่ม ${room.districtName} (${cleanCode}) มีสมาชิกครบ 10 คนแล้ว กรุณาเลือกกลุ่มอื่นหรือใช้การสุ่มกลุ่ม` };
+    return { error: `กลุ่ม ${room.districtName} (${cleanCode}) มีสมาชิกครบ 10 คนแล้ว กรุณาเลือกกลุ่มอื่นหรือสร้างกลุ่มใหม่` };
   }
 
   const { player, autoStarted } = addPlayerToDistrictRoom(room, playerName, socketId);
@@ -245,39 +272,44 @@ function fillDistrictBots(room) {
   room.macroStats.gini = eco.gini;
 }
 
-// Finalize all 20 districts when game starts:
-// 1. Districts with humans: fill incomplete slots up to 10 with bots
-// 2. Districts with 0 humans: mark as 'closed'
+// Finalize all active waiting districts when Master starts game:
+// 1. Districts with humans: fill incomplete slots up to 10 with bots and start playing
+// 2. Districts with 0 humans: remove from active rooms
 function finalizeDistrictsAndBots() {
-  initializeMasterDistricts();
   let activeCount = 0;
+  const toDelete = [];
 
-  for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-    const pad = i < 10 ? `0${i}` : `${i}`;
-    const code = `DIST-${pad}`;
-    const room = rooms.get(code);
-    if (!room) continue;
-
+  for (const [code, room] of rooms.entries()) {
     const humanCount = room.players.filter(p => !p.isBot).length;
-    if (humanCount > 0) {
-      room.status = 'playing';
-      // Fill remaining roles with bots using Veil of Ignorance
-      fillDistrictBots(room);
+    if (room.status === 'waiting') {
+      if (humanCount > 0) {
+        room.status = 'playing';
+        room.round = 1;
+        room.phase = 'action';
+        room.currentRoundData = ROUNDS_DATA[0];
+        room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
+        fillDistrictBots(room);
+        activeCount++;
+      } else {
+        toDelete.push(code);
+      }
+    } else if (room.status === 'playing') {
       activeCount++;
-    } else {
-      room.status = 'closed';
-      room.players = [];
     }
   }
 
-  // If no one joined at all, keep District 1 active with 10 bots for demo
-  if (activeCount === 0) {
-    const d1 = rooms.get('DIST-01');
-    if (d1) {
-      d1.status = 'playing';
-      fillDistrictBots(d1);
-      activeCount = 1;
-    }
+  // Remove empty waiting rooms
+  toDelete.forEach(code => rooms.delete(code));
+
+  // If no one joined at all, create District 1 with 10 bots for demo
+  if (activeCount === 0 && rooms.size === 0) {
+    const d1 = createDistrictRoom('DIST-01', 1);
+    d1.status = 'playing';
+    d1.round = 1;
+    d1.phase = 'action';
+    d1.currentRoundData = ROUNDS_DATA[0];
+    fillDistrictBots(d1);
+    activeCount = 1;
   }
 
   return activeCount;
@@ -301,10 +333,8 @@ function startDistrictWithBots(roomCode) {
   return room;
 }
 
-// Aggregate National Economics for the Master Screen Dashboard
+// Aggregate National Economics for the Master Screen Dashboard (Unlimited Dynamic Districts)
 function getNationalAggregates() {
-  initializeMasterDistricts();
-
   let totalGdp = 0;
   let totalVat = 0;
   let totalCoPay = 0;
@@ -317,29 +347,32 @@ function getNationalAggregates() {
 
   const districtsSummary = [];
 
-  for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-    const pad = i < 10 ? `0${i}` : `${i}`;
-    const code = `DIST-${pad}`;
-    const room = rooms.get(code);
-    if (!room) continue;
+  // Sort rooms sequentially by districtIndex or room code
+  const sortedRooms = Array.from(rooms.values()).sort((a, b) => {
+    if (a.districtIndex && b.districtIndex) return a.districtIndex - b.districtIndex;
+    return (a.code || '').localeCompare(b.code || '');
+  });
 
+  for (const room of sortedRooms) {
     const humans = room.players.filter(p => !p.isBot).length;
     const totalP = room.players.length;
+    const isClosed = room.status === 'closed';
 
     totalPlayersCount += totalP;
     totalHumanCount += humans;
-    totalGdp += room.macroStats.gdp;
-    totalVat += room.macroStats.totalVatCollected;
-    totalCoPay += room.macroStats.totalCoPaySubsidies;
 
-    if (totalP > 0) {
+    // Only count active rooms (rooms with players that are not closed) towards national aggregates
+    if (totalP > 0 && !isClosed) {
+      totalGdp += room.macroStats.gdp;
+      totalVat += room.macroStats.totalVatCollected;
+      totalCoPay += room.macroStats.totalCoPaySubsidies;
       giniSum += room.macroStats.gini;
       debtSum += room.macroStats.debtToGdp;
       activeDistrictsCount++;
-    }
 
-    if (room.macroStats.crisisAlert) {
-      crisesCount++;
+      if (room.macroStats.crisisAlert) {
+        crisesCount++;
+      }
     }
 
     // Average QoL for this district
@@ -347,10 +380,8 @@ function getNationalAggregates() {
       ? Math.round(room.players.reduce((sum, p) => sum + (p.qol || 50), 0) / totalP)
       : 50;
 
-    const isClosed = room.status === 'closed';
-
     districtsSummary.push({
-      districtIndex: i,
+      districtIndex: room.districtIndex,
       code: room.code,
       name: room.districtName,
       status: room.status,
@@ -380,7 +411,8 @@ function getNationalAggregates() {
 
   return {
     masterSessionCode: MASTER_SESSION_CODE,
-    totalDistricts: TOTAL_DISTRICTS,
+    totalDistricts: rooms.size,
+    totalDistrictsCount: rooms.size,
     activeDistrictsCount,
     totalPlayersCount,
     totalHumanCount,
@@ -391,7 +423,7 @@ function getNationalAggregates() {
       totalVat,
       totalCoPay,
       crisesCount,
-      safeDistrictsCount: TOTAL_DISTRICTS - crisesCount
+      safeDistrictsCount: Math.max(0, activeDistrictsCount - crisesCount)
     },
     districtsSummary,
     leaderboard: {
@@ -413,11 +445,12 @@ function getRoomRoundActions(room, roundNumber) {
 module.exports = {
   rooms,
   MASTER_SESSION_CODE,
-  TOTAL_DISTRICTS,
   PLAYERS_PER_DISTRICT,
+  getNextDistrictCode,
   initializeMasterDistricts,
   generateRoomCode,
   createDistrictRoom,
+  createCustomDistrict,
   quickJoinMaster,
   joinSpecificDistrict,
   fillDistrictBots,

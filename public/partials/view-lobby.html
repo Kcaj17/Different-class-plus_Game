@@ -3,7 +3,7 @@
   <div class="lobby-hero">
     <div class="hero-badge">
       <span class="badge-pulse"></span>
-      🎲 เกมจำลองนโยบายเศรษฐกิจ • 200 คน 20 กลุ่ม
+      🎲 เกมจำลองนโยบายเศรษฐกิจ • ระบบกลุ่มเศรษฐกิจแบบเรียลไทม์
     </div>
     <h2 class="hero-title">จำลองสถานการณ์เศรษฐกิจและการกระจายรายได้</h2>
     <p class="hero-desc">
@@ -37,9 +37,13 @@
           <span>⚡ สุ่มบทบาท & เข้าเล่นเกมทันที ➔</span>
         </button>
 
-        <div class="custom-district-toggle">
+        <button id="btn-create-custom-district" class="btn-secondary btn-large portal-btn" style="margin-top: 10px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;">
+          <span>➕ สร้างกลุ่มใหม่ (สำหรับเล่นกับเพื่อน)</span>
+        </button>
+
+        <div class="custom-district-toggle" style="margin-top: 12px;">
           <button type="button" id="btn-toggle-custom-district" class="btn-link">
-            <span>⚙️ ระบุรหัสกลุ่มด้วยตนเอง (ถ้ามี)</span>
+            <span>⚙️ เข้าร่วมด้วยรหัสกลุ่มเพื่อน (ถ้ามี)</span>
           </button>
           <div id="custom-district-input-box" class="custom-district-box hidden">
             <div class="input-inline" style="margin-top: 8px;">
@@ -47,6 +51,7 @@
                 autocapitalize="characters">
               <button id="btn-join-room" class="btn-secondary">เข้าร่วมกลุ่มนี้</button>
             </div>
+            <small style="color: #94a3b8; font-size: 0.78rem; display: block; margin-top: 4px;">กรอกรหัสกลุ่มที่เพื่อนส่งให้เพื่อเข้าร่วมกลุ่มเดียวกัน</small>
           </div>
         </div>
       </div>

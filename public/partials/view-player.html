@@ -45,10 +45,12 @@
 
   <!-- DISTRICT WAITING HALL (When room.status === 'waiting') -->
   <div id="district-waiting-room" class="district-waiting-card glass-card hidden">
-    <div class="waiting-header">
       <div class="waiting-badge-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
         <span class="pulse-dot"></span>
         <span id="waiting-district-badge" class="chapter-round-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">📍 กลุ่มเศรษฐกิจที่ 1 (DIST-01)</span>
+        <button type="button" id="btn-copy-district-code" class="btn-link" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 20px; padding: 4px 12px; color: #38bdf8; font-size: 0.85rem; cursor: pointer;" title="คลิกเพื่อคัดลอกรหัสกลุ่มส่งให้เพื่อน">
+          <span>📋 ชวนเพื่อน: <strong id="waiting-room-code-display">DIST-01</strong> (แตะเพื่อคัดลอก)</span>
+        </button>
         <span class="stage-guide-tag">⏳ ห้องรอรวมกลุ่ม</span>
       </div>
       <h3 class="waiting-title">กำลังรอสมาชิกเข้าร่วมกลุ่ม...</h3>

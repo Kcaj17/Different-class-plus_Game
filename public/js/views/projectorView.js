@@ -73,17 +73,23 @@ export function renderProjectorView(room, roundData) {
   // Player Leaderboard Roster
   const rosterContainer = document.getElementById('proj-player-list');
   if (rosterContainer && room.players) {
-    const sorted = [...room.players].sort((a, b) => (b.cash + (b.businessValue || 0)) - (a.cash + (a.businessValue || 0)));
-    rosterContainer.innerHTML = sorted.map((p, rank) => `
-      <div class="mini-roster-item">
-        <div class="player-title">
-          <span>${p.avatar || '👤'}</span>
-          <strong>${rank + 1}. ${p.name}</strong>
+    const sorted = [...room.players].sort((a, b) => 
+      (Math.max(0, b.cash + (b.businessValue || 0) - (b.debt || 0))) - 
+      (Math.max(0, a.cash + (a.businessValue || 0) - (a.debt || 0)))
+    );
+    rosterContainer.innerHTML = sorted.map((p, rank) => {
+      const netWealth = Math.max(0, p.cash + (p.businessValue || 0) - (p.debt || 0));
+      return `
+        <div class="mini-roster-item">
+          <div class="player-title">
+            <span>${p.avatar || '👤'}</span>
+            <strong>${rank + 1}. ${p.name}</strong>
+          </div>
+          <div class="player-wealth">
+            ${Math.round(netWealth).toLocaleString()} บ.
+          </div>
         </div>
-        <div class="player-wealth">
-          ${Math.round(p.cash + (p.businessValue || 0)).toLocaleString()} บ.
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 }

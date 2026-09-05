@@ -87,7 +87,7 @@
       <div class="master-kpi-bar glass-card">
         <div class="kpi-box">
           <span class="kpi-label">ผู้เล่นในระบบ</span>
-          <strong class="kpi-val text-accent" id="master-total-players">0 / 200 คน</strong>
+          <strong class="kpi-val text-accent" id="master-total-players">0 คน (0 กลุ่ม)</strong>
         </div>
         <div class="kpi-box">
           <span class="kpi-label">Gini เฉลี่ยทั้งประเทศ</span>
@@ -101,7 +101,7 @@
         </div>
         <div class="kpi-box">
           <span class="kpi-label">GDP รวมทุกกลุ่ม</span>
-          <strong class="kpi-val text-success" id="master-total-gdp">20,000,000 บ.</strong>
+          <strong class="kpi-val text-success" id="master-total-gdp">0 บ.</strong>
         </div>
         <div class="kpi-box">
           <span class="kpi-label">ภาษี VAT 7% คืนคลัง</span>
@@ -109,7 +109,7 @@
         </div>
         <div class="kpi-box">
           <span class="kpi-label">สถานะกลุ่มปลอดภัย</span>
-          <strong class="kpi-val" id="master-safe-districts">20 / 20 กลุ่ม</strong>
+          <strong class="kpi-val" id="master-safe-districts">0 / 0 กลุ่ม</strong>
         </div>
       </div>
 
@@ -127,7 +127,7 @@
             <div id="master-live-ticker-list" class="ticker-stream">
               <div class="ticker-item ticker-normal">
                 <span class="ticker-time">เริ่มระบบ</span>
-                <span class="ticker-msg">📢 พร้อมเปิดรับผู้เล่น 20 กลุ่ม รวมความจุ 200 คน (สแกน QR Code เพื่อเข้าร่วม)</span>
+                <span class="ticker-msg">📢 พร้อมเปิดรับผู้เล่นเข้าสู่กลุ่มเศรษฐกิจแบบ Real-time (สแกน QR Code เพื่อเข้าร่วม)</span>
               </div>
               <div class="ticker-item ticker-normal">
                 <span class="ticker-time">นโยบาย</span>
@@ -151,7 +151,7 @@
               </div>
             </div>
             <div class="ticker-terminal-footer">
-              <span class="footer-left"><span class="pulse-dot-mini"></span> เฝ้าระวัง 20 เขตเศรษฐกิจต่อเนื่อง</span>
+              <span class="footer-left"><span class="pulse-dot-mini"></span> เฝ้าระวังกลุ่มเศรษฐกิจต่อเนื่อง</span>
               <span class="footer-right">D&D Economic Live Stream</span>
             </div>
           </div>
@@ -185,14 +185,19 @@
         </div>
       </div>
 
-      <!-- 20 Districts Real-time Grid -->
+      <!-- Real-time Districts Grid -->
       <div class="districts-section">
-        <div class="section-title-bar">
-          <h3>🗺️ สถานะ 20 เขตเศรษฐกิจทั่วประเทศ (คลิก "ส่องเขตนี้" เพื่อดูเจาะลึก)</h3>
-          <span class="sub-hint">อัปเดตอัตโนมัติแบบ Real-time ทุก 4 วินาที</span>
+        <div class="section-title-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3>🗺️ สถานะกลุ่มเศรษฐกิจทั่วประเทศ (คลิก "ส่องเขตนี้" เพื่อดูเจาะลึก)</h3>
+            <span class="sub-hint">อัปเดตอัตโนมัติแบบ Real-time ทุก 4 วินาที</span>
+          </div>
+          <div class="search-filter-box" style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="master-search-districts" placeholder="🔍 ค้นหากลุ่ม (เช่น DIST-01)..." style="padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.8); color: #fff; font-size: 0.85rem; width: 220px;" autocomplete="off" />
+          </div>
         </div>
         <div id="master-districts-grid" class="districts-grid">
-          <!-- Dynamically populated 20 cards -->
+          <!-- Dynamically populated cards -->
         </div>
       </div>
     </main>

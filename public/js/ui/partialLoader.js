@@ -7,6 +7,7 @@ const PARTIALS_CONFIG = [
   { selector: '#mount-header', url: '/partials/header.html' },
   { selector: '#mount-lobby', url: '/partials/view-lobby.html' },
   { selector: '#mount-master', url: '/partials/view-master.html' },
+  { selector: '#mount-projector', url: '/partials/view-projector.html' },
   { selector: '#mount-player', url: '/partials/view-player.html' },
   { selector: '#mount-gameover', url: '/partials/view-gameover.html' },
   { selector: '#mount-modals', url: '/partials/modals.html' }

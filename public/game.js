@@ -34,6 +34,12 @@ function checkUrlRouting() {
     return;
   }
 
+  if (viewParam === 'projector') {
+    const roomParam = urlParams.get('room') || 'DIST-01';
+    openProjectorScreen(roomParam);
+    return;
+  }
+
   // Check if player has an existing session in sessionStorage for seamless refresh
   const sessionStr = sessionStorage.getItem('dnd_player_session');
   if (sessionStr) {
@@ -101,6 +107,31 @@ function openMasterScreen() {
   showToast('เข้าสู่หน้าจอใหญ่ Master National Command Center (200 Players) เรียบร้อยแล้ว', 'success', 3000);
 }
 
+function openProjectorScreen(roomCode) {
+  playSound('fanfare');
+  setIsProjector(true);
+  switchView('projector');
+  const targetCode = (roomCode || 'DIST-01').toUpperCase().trim();
+
+  const emitJoin = () => {
+    if (socket) {
+      socket.emit('join_room', {
+        roomCode: targetCode,
+        playerName: 'Projector Screen',
+        isProjector: true
+      });
+    }
+  };
+
+  if (socket && socket.connected) {
+    emitJoin();
+  } else if (socket) {
+    socket.once('connect', emitJoin);
+  }
+
+  showToast(`เข้าสู่หน้าจอ Projector (${targetCode}) เรียบร้อยแล้ว`, 'success', 3000);
+}
+
 function initEventListeners() {
   // Sound Toggle
   const btnSound = document.getElementById('btn-sound-toggle');
@@ -147,6 +178,30 @@ function initEventListeners() {
     });
   }
 
+  // Create Custom District Button (Play with Friends)
+  const btnCreateCustom = document.getElementById('btn-create-custom-district');
+  if (btnCreateCustom) {
+    btnCreateCustom.addEventListener('click', () => {
+      playSound('click');
+      const nameInput = document.getElementById('input-player-name');
+      const playerName = (nameInput ? nameInput.value : '').trim();
+
+      btnCreateCustom.disabled = true;
+      btnCreateCustom.innerHTML = '<span>⏳ กำลังสร้างกลุ่มใหม่...</span>';
+
+      if (socket) {
+        socket.emit('player:create_custom_room', {
+          playerName: playerName || `ผู้เล่น_${Math.floor(Math.random() * 900 + 100)}`
+        });
+      }
+
+      setTimeout(() => {
+        btnCreateCustom.disabled = false;
+        btnCreateCustom.innerHTML = '<span>➕ สร้างกลุ่มใหม่ (สำหรับเล่นกับเพื่อน)</span>';
+      }, 3500);
+    });
+  }
+
   // Standard Join Room
   const btnJoin = document.getElementById('btn-join-room');
   if (btnJoin) {
@@ -182,7 +237,7 @@ function initEventListeners() {
     nameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        const customBox = document.getElementById('custom-room-section');
+        const customBox = document.getElementById('custom-district-input-box');
         const customRoomCode = (roomInput ? roomInput.value : '').trim();
         // If user has custom room code section open with a code typed, join room; otherwise Quick Join
         if (customBox && !customBox.classList.contains('hidden') && customRoomCode) {

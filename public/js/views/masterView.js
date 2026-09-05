@@ -69,7 +69,7 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
   // Update Player count badge on QR sidebar and modal
   const qrPlayerCount = document.getElementById('master-qr-player-count');
   const qrModalCount = document.getElementById('master-qr-modal-count');
-  const totalCountText = `${aggregates.totalPlayersCount || 0} / 200 คน`;
+  const totalCountText = `${aggregates.totalHumanCount || 0} คน (${aggregates.activeDistrictsCount || 0} กลุ่ม)`;
   if (qrPlayerCount) qrPlayerCount.textContent = totalCountText;
   if (qrModalCount) qrModalCount.textContent = totalCountText;
 
@@ -91,7 +91,8 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
   const safeDistrictsEl = document.getElementById('master-safe-districts');
 
   if (totalPlayersEl) {
-    totalPlayersEl.textContent = totalCountText;
+    const bots = Math.max(0, (aggregates.totalPlayersCount || 0) - (aggregates.totalHumanCount || 0));
+    totalPlayersEl.innerHTML = `${aggregates.totalHumanCount || 0} คน <small style="color: #94a3b8; font-size: 0.75rem;">(${aggregates.activeDistrictsCount || 0} กลุ่ม${bots > 0 ? ` + 🤖${bots}` : ''})</small>`;
   }
   if (avgGiniEl) {
     avgGiniEl.textContent = macro.avgGini !== undefined ? macro.avgGini.toFixed(3) : '0.450';
@@ -106,7 +107,7 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
     totalVatEl.textContent = `${(macro.totalVat || 0).toLocaleString()} บ.`;
   }
   if (safeDistrictsEl) {
-    safeDistrictsEl.textContent = `${macro.safeDistrictsCount || 20} / 20 เขต`;
+    safeDistrictsEl.textContent = `${macro.safeDistrictsCount ?? 0} / ${aggregates.activeDistrictsCount || 0} กลุ่ม`;
   }
 
   // 2. Live Ticker Event
@@ -114,71 +115,97 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
     appendTickerEvent(liveEvent);
   }
 
-  // 3. Render 20 Districts Grid
+  // Attach search input listener once
+  const searchInput = document.getElementById('master-search-districts');
+  if (searchInput && !searchInput._listenerAttached) {
+    searchInput._listenerAttached = true;
+    searchInput.addEventListener('input', () => {
+      if (window._lastMasterAggregates) {
+        renderMasterScreen(window._lastMasterAggregates);
+      }
+    });
+  }
+  window._lastMasterAggregates = aggregates;
+
+  // 3. Render Districts Grid with search filtering
   const gridContainer = document.getElementById('master-districts-grid');
   if (gridContainer && aggregates.districtsSummary) {
-    gridContainer.innerHTML = aggregates.districtsSummary.map(d => {
-      if (d.isClosed) {
+    let districts = aggregates.districtsSummary;
+    const query = (searchInput ? searchInput.value : '').trim().toUpperCase();
+    if (query) {
+      districts = districts.filter(d => (d.code || '').toUpperCase().includes(query) || (d.name || '').toUpperCase().includes(query));
+    }
+
+    if (districts.length === 0) {
+      gridContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 48px 20px; text-align: center; color: #94a3b8; font-size: 0.95rem;">
+          ${query ? `🔍 ไม่พบกลุ่มที่ตรงกับคำค้นหา "${query}"` : '⏳ ยังไม่มีกลุ่มเศรษฐกิจเข้าร่วมในระบบ (รอผู้เล่นสแกน QR Code หรือกดสุ่มกลุ่ม)'}
+        </div>
+      `;
+    } else {
+      gridContainer.innerHTML = districts.map(d => {
+        if (d.isClosed) {
+          return `
+            <div class="district-card glass-card district-closed" data-code="${d.code}" style="opacity: 0.45; filter: grayscale(0.5);">
+              <div class="district-card-header">
+                <div class="district-name-badge">
+                  <span class="district-num">#${d.districtIndex}</span>
+                  <strong>${d.name}</strong>
+                </div>
+                <span class="round-pill" style="background: rgba(148, 163, 184, 0.2); color: #94a3b8;">🔒 ปิดทำการ</span>
+              </div>
+              <div style="padding: 24px 0; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                <span>ไม่มีผู้เล่นคนจริงในเขตนี้ (ปิดการประมวลผล)</span>
+              </div>
+            </div>
+          `;
+        }
+
+        const isCrisis = d.hasCrisis;
+        const giniColor = d.gini < 0.35 ? '#10b981' : (d.gini <= 0.50 ? '#f59e0b' : '#ef4444');
+        const debtColor = d.debtToGdp < 60 ? '#10b981' : (d.debtToGdp < 67 ? '#f59e0b' : '#ef4444');
+        const botCount = Math.max(0, (d.totalPlayers || 10) - d.humanPlayers);
+
         return `
-          <div class="district-card glass-card district-closed" data-code="${d.code}" style="opacity: 0.45; filter: grayscale(0.5);">
+          <div class="district-card glass-card ${isCrisis ? 'crisis-glow' : ''}" data-code="${d.code}">
             <div class="district-card-header">
               <div class="district-name-badge">
                 <span class="district-num">#${d.districtIndex}</span>
                 <strong>${d.name}</strong>
               </div>
-              <span class="round-pill" style="background: rgba(148, 163, 184, 0.2); color: #94a3b8;">🔒 ปิดทำการ</span>
+              <span class="round-pill">รอบ ${d.round}/${d.maxRounds}</span>
             </div>
-            <div style="padding: 24px 0; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-              <span>ไม่มีผู้เล่นคนจริงในเขตนี้ (ปิดการประมวลผล)</span>
+
+            <div class="district-stats-row">
+              <div class="stat-box">
+                <span class="stat-label">ผู้เล่น</span>
+                <strong class="stat-val">${d.humanPlayers} ${botCount > 0 ? `<small style="color: #38bdf8;">+🤖${botCount}</small>` : ''}</strong>
+              </div>
+              <div class="stat-box">
+                <span class="stat-label">Gini</span>
+                <strong class="stat-val" style="color: ${giniColor};">${d.gini.toFixed(3)}</strong>
+              </div>
+              <div class="stat-box">
+                <span class="stat-label">หนี้/GDP</span>
+                <strong class="stat-val" style="color: ${debtColor};">${d.debtToGdp}%</strong>
+              </div>
+              <div class="stat-box">
+                <span class="stat-label">สุขภาวะเฉลี่ย</span>
+                <strong class="stat-val text-qol">${d.avgQol}%</strong>
+              </div>
+            </div>
+
+            ${isCrisis ? `<div class="district-crisis-tag">🚨 ${d.crisisAlert || 'เกิดวิกฤตเศรษฐกิจ!'}</div>` : ''}
+
+            <div class="district-card-footer">
+              <button class="btn-inspect-district" onclick="window.inspectDistrict('${d.code}')">
+                <span>🔍 ดูรายละเอียดกลุ่มนี้</span>
+              </button>
             </div>
           </div>
         `;
-      }
-
-      const isCrisis = d.hasCrisis;
-      const giniColor = d.gini < 0.35 ? '#10b981' : (d.gini <= 0.50 ? '#f59e0b' : '#ef4444');
-      const debtColor = d.debtToGdp < 60 ? '#10b981' : (d.debtToGdp < 67 ? '#f59e0b' : '#ef4444');
-      const botCount = Math.max(0, (d.totalPlayers || 10) - d.humanPlayers);
-
-      return `
-        <div class="district-card glass-card ${isCrisis ? 'crisis-glow' : ''}" data-code="${d.code}">
-          <div class="district-card-header">
-            <div class="district-name-badge">
-              <span class="district-num">#${d.districtIndex}</span>
-              <strong>${d.name}</strong>
-            </div>
-            <span class="round-pill">รอบ ${d.round}/${d.maxRounds}</span>
-          </div>
-
-          <div class="district-stats-row">
-            <div class="stat-box">
-              <span class="stat-label">ผู้เล่น</span>
-              <strong class="stat-val">${d.humanPlayers} ${botCount > 0 ? `<small style="color: #38bdf8;">+🤖${botCount}</small>` : ''}</strong>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">Gini</span>
-              <strong class="stat-val" style="color: ${giniColor};">${d.gini.toFixed(3)}</strong>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">หนี้/GDP</span>
-              <strong class="stat-val" style="color: ${debtColor};">${d.debtToGdp}%</strong>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">สุขภาวะเฉลี่ย</span>
-              <strong class="stat-val text-qol">${d.avgQol}%</strong>
-            </div>
-          </div>
-
-          ${isCrisis ? `<div class="district-crisis-tag">🚨 ${d.crisisAlert || 'เกิดวิกฤตเศรษฐกิจ!'}</div>` : ''}
-
-          <div class="district-card-footer">
-            <button class="btn-inspect-district" onclick="window.inspectDistrict('${d.code}')">
-              <span>🔍 ดูรายละเอียดกลุ่มนี้</span>
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
+      }).join('');
+    }
   }
 
   // 4. Philosophy Leaderboard

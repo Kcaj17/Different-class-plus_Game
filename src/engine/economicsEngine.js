@@ -9,12 +9,12 @@ function calculateLorenzAndGini(players) {
     };
   }
 
-  // Sort players by total wealth (cash + business assets)
+  // Sort players by total net wealth (cash + business assets - debt)
   const sorted = [...players].map(p => ({
     id: p.id,
     name: p.name || p.title,
     roleType: p.roleType,
-    wealth: Math.max(0, p.cash + (p.businessValue || 0))
+    wealth: Math.max(0, (p.cash || 0) + (p.businessValue || 0) - (p.debt || 0))
   })).sort((a, b) => a.wealth - b.wealth);
 
   const n = sorted.length;
@@ -89,7 +89,9 @@ function evaluateFinalResults(room) {
 
   // Role Winners
   const capitalist = players.find(p => p.roleType === 'capitalist');
-  const topSme = [...players.filter(p => p.roleType === 'sme_vendor')].sort((a, b) => (b.cash + b.businessValue) - (a.cash + a.businessValue))[0];
+  const topSme = [...players.filter(p => p.roleType === 'sme_vendor')].sort((a, b) => 
+    ((b.cash + (b.businessValue || 0) - (b.debt || 0)) - (a.cash + (a.businessValue || 0) - (a.debt || 0)))
+  )[0];
   const topCitizen = [...players.filter(p => p.roleType === 'general_citizen')].sort((a, b) => b.qol - a.qol)[0];
   const topVulnerable = [...vulnerableGroup].sort((a, b) => b.qol - a.qol)[0];
 
@@ -118,8 +120,8 @@ function evaluateFinalResults(room) {
       }
     },
     roleWinners: {
-      capitalist: capitalist ? { name: capitalist.name, score: (capitalist.cash + capitalist.businessValue).toLocaleString() + ' บาท' } : null,
-      sme: topSme ? { name: topSme.name, score: (topSme.cash + topSme.businessValue).toLocaleString() + ' บาท' } : null,
+      capitalist: capitalist ? { name: capitalist.name, score: (Math.max(0, capitalist.cash + (capitalist.businessValue || 0) - (capitalist.debt || 0))).toLocaleString() + ' บาท' } : null,
+      sme: topSme ? { name: topSme.name, score: (Math.max(0, topSme.cash + (topSme.businessValue || 0) - (topSme.debt || 0))).toLocaleString() + ' บาท' } : null,
       citizen: topCitizen ? { name: topCitizen.name, score: `สุขภาวะ ${topCitizen.qol} คะแนน` } : null,
       vulnerable: topVulnerable ? { name: topVulnerable.name, score: `สุขภาวะ ${topVulnerable.qol} คะแนน` } : null
     }

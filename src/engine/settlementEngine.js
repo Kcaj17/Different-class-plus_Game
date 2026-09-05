@@ -23,13 +23,14 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
   let actionCategory = 'standard';
 
   const role = player.roleType;
+  const safeActionId = (typeof actionId === 'string') ? actionId : '';
 
   // 1. Dynamic AI / Thematic Round Action Lookup
   const currentRoundActions = (room.roundActions && room.roundActions[room.round] && room.roundActions[room.round][role])
     ? room.roundActions[room.round][role]
     : (THEMATIC_ROUND_ACTIONS[room.round]?.[role] || []);
 
-  const matchedAction = currentRoundActions.find(a => a.id === actionId);
+  const matchedAction = currentRoundActions.find(a => a.id === safeActionId);
 
   if (matchedAction) {
     relevantStatKey = (matchedAction.statKey || 'lab').toLowerCase();
@@ -39,12 +40,12 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
   } else {
     // 2. Legacy Static Fallback Definitions
     if (role === 'capitalist') {
-      if (actionId === 'expand_chain' || actionId.includes('expansion')) {
+      if (safeActionId === 'expand_chain' || safeActionId.includes('expansion')) {
         relevantStatKey = 'cap';
         dc = 12;
         actionName = 'ขยายสาขาห้างค้าปลีก & ระบบดิจิทัล';
         actionCategory = 'expansion';
-      } else if (actionId === 'etax_supply' || actionId.includes('supply')) {
+      } else if (safeActionId === 'etax_supply' || safeActionId.includes('supply')) {
         relevantStatKey = 'dig';
         dc = 11;
         actionName = 'ลงทุนระบบ e-Tax & เครือข่ายโลจิสติกส์';
@@ -56,12 +57,12 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
         actionCategory = 'investment';
       }
     } else if (role === 'sme_vendor') {
-      if (actionId === 'copay_boost' || actionId.includes('sales')) {
+      if (safeActionId === 'copay_boost' || safeActionId.includes('sales')) {
         relevantStatKey = 'dig';
         dc = 10;
         actionName = 'เปิดรับสแกนแอปถุงเงิน 60/40 ดึงดูดลูกค้า';
         actionCategory = 'sales';
-      } else if (actionId === 'bank_loan' || actionId.includes('credit')) {
+      } else if (safeActionId === 'bank_loan' || safeActionId.includes('credit')) {
         relevantStatKey = 'inf';
         dc = 13;
         actionName = 'ใช้ Digital Footprint ยื่นกู้สินเชื่อดอกเบี้ยต่ำในระบบ';
@@ -73,17 +74,17 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
         actionCategory = 'restock';
       }
     } else if (role === 'general_citizen') {
-      if (actionId === 'copay_spend_sme' || actionId.includes('copay_sme')) {
+      if (safeActionId === 'copay_spend_sme' || safeActionId.includes('copay_sme')) {
         relevantStatKey = 'dig';
         dc = 10;
         actionName = 'ใช้สิทธิไทยช่วยไทย 60/40 อุดหนุนร้านค้าชุมชน';
         actionCategory = 'copay_sme';
-      } else if (actionId === 'copay_spend_mall' || actionId.includes('copay_mall')) {
+      } else if (safeActionId === 'copay_spend_mall' || safeActionId.includes('copay_mall')) {
         relevantStatKey = 'dig';
         dc = 10;
         actionName = 'ใช้สิทธิ 60/40 สั่งสินค้าผ่านแพลตฟอร์ม/ห้างใหญ่';
         actionCategory = 'copay_mall';
-      } else if (actionId === 'upgrade_skill' || actionId.includes('skill')) {
+      } else if (safeActionId === 'upgrade_skill' || safeActionId.includes('skill')) {
         relevantStatKey = 'lab';
         dc = 12;
         actionName = 'เข้าศึกษาอบรมพัฒนาทักษะอาชีพ (Skill Upgrading)';
@@ -95,12 +96,12 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
         actionCategory = 'work';
       }
     } else if (role === 'vulnerable_group') {
-      if (actionId === 'claim_welfare' || actionId.includes('welfare_direct')) {
+      if (safeActionId === 'claim_welfare' || safeActionId.includes('welfare_direct')) {
         relevantStatKey = 'dig';
         dc = 9;
         actionName = 'เบิกรับเงินโอนสวัสดิการแห่งรัฐ 1,000 บาท';
         actionCategory = 'welfare_direct';
-      } else if (actionId === 'buy_essentials' || actionId.includes('welfare_shop')) {
+      } else if (safeActionId === 'buy_essentials' || safeActionId.includes('welfare_shop')) {
         relevantStatKey = 'lab';
         dc = 9;
         actionName = 'ใช้บัตรสวัสดิการซื้อข้าวสารอาหารแห้งร้านธงฟ้า';
@@ -181,10 +182,11 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
       if (isSuccess && player.digitalFootprint >= 1) {
         const loanAmount = isNat20 ? 35000 : 20000;
         goldChange = loanAmount;
+        debtChange = loanAmount; // Record debt liability
         player.businessValue += loanAmount * 1.2;
         player.digitalFootprint += 2;
         qolChange = 12;
-        outcomeDesc = `สินเชื่อดอกเบี้ยต่ำ 3% อนุมัติผ่านฉลุย! ได้รับทุนหมุนเวียน +${loanAmount.toLocaleString()} บาท`;
+        outcomeDesc = `สินเชื่อดอกเบี้ยต่ำ 3% อนุมัติผ่านฉลุย! ได้รับทุนหมุนเวียน +${loanAmount.toLocaleString()} บาท (บันทึกเป็นภาระหนี้สินในระบบ)`;
       } else {
         outcomeDesc = isNat1
           ? `ถูกปฏิเสธสินเชื่อและถูกคิดค่าธรรมเนียมตรวจประวัติ 2,000 บาท!`
@@ -265,6 +267,7 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
 
   // Apply delta to player
   player.cash += goldChange;
+  player.debt = Math.max(0, (player.debt || 0) + debtChange);
   player.qol = Math.max(10, Math.min(100, player.qol + qolChange));
   if (player.cash < 0) {
     player.debt += Math.abs(player.cash);
@@ -314,6 +317,17 @@ function processDistrictSettlement(room) {
   const roundInfo = room.currentRoundData || ROUNDS_DATA[room.round - 1];
   const logs = [];
 
+  // Idempotency Guard: Prevent duplicate settlement calculation in the same round
+  if (room.lastSettledRound === room.round) {
+    const eco = calculateLorenzAndGini(room.players);
+    return {
+      eco,
+      logs: room.lastSettlementLogs || logs,
+      crisis: room.macroStats.crisisAlert,
+      alreadySettled: true
+    };
+  }
+
   // Fixed Income & Expense adjusted by Energy Inflation
   room.players.forEach(player => {
     const baseInc = (player.baseIncome || 10000) * (1 + (player.skillLevel - 1) * 0.25);
@@ -348,6 +362,10 @@ function processDistrictSettlement(room) {
     crisis = '⚠️ วิกฤตความเหลื่อมล้ำ: ค่า Gini พุ่งแตะ 0.82 สังคมแตกแยก!';
   }
   room.macroStats.crisisAlert = crisis;
+
+  // Record settlement state for this round
+  room.lastSettledRound = room.round;
+  room.lastSettlementLogs = logs;
 
   return { eco, logs, crisis };
 }

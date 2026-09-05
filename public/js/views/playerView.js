@@ -338,12 +338,15 @@ export function updatePostRollWaitingState(room, player) {
 // Render District Waiting Hall
 function renderWaitingRoom(room, player) {
   const badge = document.getElementById('waiting-district-badge');
+  const codeDisplay = document.getElementById('waiting-room-code-display');
   const countEl = document.getElementById('waiting-roster-count');
   const bar = document.getElementById('waiting-progress-bar');
   const list = document.getElementById('waiting-members-list');
   const btnStartWithBots = document.getElementById('btn-start-with-bots');
+  const btnCopyCode = document.getElementById('btn-copy-district-code');
 
-  if (badge) badge.textContent = `🏰 ${room.districtName} (${room.code})`;
+  if (badge) badge.textContent = `📍 ${room.districtName} (${room.code})`;
+  if (codeDisplay) codeDisplay.textContent = room.code;
 
   const total = room.players ? room.players.length : 0;
   if (countEl) countEl.textContent = `${total} / 10 คน`;
@@ -365,6 +368,22 @@ function renderWaitingRoom(room, player) {
         </div>
       `;
     }).join('');
+  }
+
+  // Bind Copy District Code Button
+  if (btnCopyCode && !btnCopyCode.dataset.bound) {
+    btnCopyCode.dataset.bound = 'true';
+    btnCopyCode.onclick = () => {
+      playSound('click');
+      const code = (state.currentRoom && state.currentRoom.code) || room.code;
+      if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+          showToast(`📋 คัดลอกรหัสกลุ่ม ${code} สำเร็จ! ส่งให้เพื่อนเข้าร่วมได้เลย`, 'success');
+        }).catch(() => {
+          showToast(`รหัสกลุ่ม: ${code}`, 'info');
+        });
+      }
+    };
   }
 
   if (btnStartWithBots && !btnStartWithBots.dataset.bound) {

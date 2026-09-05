@@ -1,0 +1,129 @@
+<!-- ================= 2. PROJECTOR / HOST SCREEN VIEW ================= -->
+<section id="view-projector" class="hidden-view">
+  <!-- Phase Stepper -->
+  <div class="glass-card phase-stepper-container">
+    <div class="stepper-track">
+      <div class="stepper-node active" id="step-node-1">
+        <span class="node-badge">1</span>
+        <span class="node-label">วิเคราะห์สถานการณ์</span>
+      </div>
+      <div class="stepper-line"></div>
+      <div class="stepper-node" id="step-node-2">
+        <span class="node-badge">2</span>
+        <span class="node-label">ตัดสินใจเชิงนโยบาย</span>
+      </div>
+      <div class="stepper-line"></div>
+      <div class="stepper-node" id="step-node-3">
+        <span class="node-badge">3</span>
+        <span class="node-label">สรุปผลเศรษฐกิจ & QoL</span>
+      </div>
+    </div>
+    <div class="stepper-status-text" id="proj-phase-description">
+      กำลังอยู่ในขั้นตอน: เลือกกิจกรรมทางเศรษฐกิจและทอยเต๋า D20
+    </div>
+  </div>
+
+  <!-- Macro Banner -->
+  <div class="glass-card macro-banner">
+    <div class="macro-item">
+      <span class="macro-label">ไตรมาส / รอบที่</span>
+      <strong class="macro-val text-accent" id="proj-round-indicator">รอบที่ 1 / 6</strong>
+    </div>
+    <div class="macro-item">
+      <span class="macro-label">GDP รวมในเขต</span>
+      <strong class="macro-val text-success" id="proj-gdp">1,000,000 บาท</strong>
+    </div>
+    <div class="macro-item">
+      <div class="debt-header">
+        <span class="macro-label">หนี้สาธารณะ / GDP</span>
+        <span class="debt-limit-tag">เพดาน 70%</span>
+      </div>
+      <strong class="macro-val text-danger" id="proj-debt">62.0%</strong>
+      <div class="debt-bar-bg">
+        <div class="debt-bar-fill" id="proj-debt-bar" style="width: 88.5%;"></div>
+        <div class="debt-ceiling-marker" style="left: 100%;"></div>
+      </div>
+    </div>
+    <div class="macro-item">
+      <span class="macro-label">สัมประสิทธิ์จีนี (Gini)</span>
+      <strong class="macro-val text-warning" id="proj-gini">0.450</strong>
+      <span class="gini-status" id="proj-gini-text" style="color: #f59e0b;">ความเหลื่อมล้ำปานกลาง</span>
+    </div>
+    <div class="macro-item">
+      <span class="macro-label">ภาษี VAT 7% สะสม</span>
+      <strong class="macro-val text-accent" id="proj-vat">0 บาท</strong>
+    </div>
+  </div>
+
+  <!-- Policy Headline Card -->
+  <div class="glass-card policy-headline-card">
+    <div class="policy-headline-header">
+      <span class="policy-badge" id="proj-policy-badge">📢 นโยบายรอบที่ 1: มาตรการเปิดภาคเรียน</span>
+      <span class="submission-counter-badge" id="proj-roll-count">🎯 ติดตามความคืบหน้าแบบ Real-time</span>
+    </div>
+    <h3 class="policy-title" id="proj-policy-title">ฐานรากก่อนมีมาตรการช่วยเหลือ</h3>
+    <p class="policy-desc" id="proj-policy-desc">
+      ภาวะเศรษฐกิจเริ่มต้น ประชาชนและธุรกิจดำเนินกิจกรรมตามหน้าที่การผลิตพื้นฐาน
+    </p>
+    <div class="policy-news-flash" id="proj-policy-news">
+      📰 ข่าวด่วน: ค่าครองชีพและต้นทุนพลังงานทรงตัวในระดับปกติ
+    </div>
+  </div>
+
+  <!-- Main Grid: Lorenz Chart, Town Flow, and Player Roster -->
+  <div class="projector-main-grid">
+    <!-- 1. Lorenz Curve Chart -->
+    <div class="glass-card chart-card">
+      <div class="chart-header">
+        <h4>📊 เส้นโค้งลอเรนซ์ (Lorenz Curve)</h4>
+        <span class="badge-tag">ความเหลื่อมล้ำ</span>
+      </div>
+      <div class="canvas-wrapper">
+        <canvas id="chart-lorenz-proj"></canvas>
+      </div>
+      <div class="lorenz-explanation">
+        <small>เส้นโค้งแสดงสัดส่วนความมั่งคั่งสะสม ยิ่งห่างจากเส้นทแยงมุม ยิ่งสะท้อนความเหลื่อมล้ำสูง</small>
+      </div>
+    </div>
+
+    <!-- 2. Town Flow Diagram -->
+    <div class="glass-card town-flow-diagram">
+      <div class="town-node node-gov">
+        <span class="node-icon">🏛️</span>
+        <strong class="node-name">ภาครัฐ / กองทุนสวัสดิการ</strong>
+        <span class="node-sub">นโยบาย 60/40 & จัดเก็บภาษี VAT</span>
+      </div>
+
+      <div class="town-sub-grid">
+        <div class="town-node node-capitalist">
+          <span class="node-icon">👑</span>
+          <strong class="node-name">ธุรกิจขนาดใหญ่</strong>
+          <span class="node-sub">ซัพพลายเชน & e-Tax</span>
+        </div>
+        <div style="text-align: center; color: var(--color-primary); font-size: 1.2rem;">⇄</div>
+        <div class="town-node node-sme">
+          <span class="node-icon">🏪</span>
+          <strong class="node-name">ร้านค้าชุมชน SME</strong>
+          <span class="node-sub">ถุงเงิน & สินเชื่อธุรกรรม</span>
+        </div>
+      </div>
+
+      <div class="town-node node-citizen">
+        <span class="node-icon">👥</span>
+        <strong class="node-name">ประชาชน & กลุ่มเปราะบาง</strong>
+        <span class="node-sub">การบริโภค 60/40 & สวัสดิการตรง</span>
+      </div>
+    </div>
+
+    <!-- 3. Mini Leaderboard Roster -->
+    <div class="glass-card roster-card">
+      <div class="card-title-bar">
+        <h4>🏆 ทำเนียบความมั่งคั่งสุทธิ</h4>
+        <span class="badge-tag">10 คนในเขต</span>
+      </div>
+      <div id="proj-player-list" class="mini-roster-list" style="padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto;">
+        <!-- Filled dynamically by projectorView.js -->
+      </div>
+    </div>
+  </div>
+</section>
