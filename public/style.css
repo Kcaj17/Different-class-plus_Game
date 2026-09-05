@@ -1966,6 +1966,305 @@ button:disabled {
   box-shadow: 0 0 24px rgba(16, 185, 129, 0.25) !important;
 }
 
+/* MASTER SCREEN: Split-Screen Layout Container */
+.master-layout-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Floating Tab: Appears when Sidebar is Collapsed */
+.floating-qr-tab {
+  position: fixed;
+  left: 0;
+  top: 140px;
+  z-index: 999;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #10b981;
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  padding: 12px 16px 12px 14px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(16, 185, 129, 0.3);
+  transition: transform 0.25s ease, background 0.2s ease, box-shadow 0.2s ease;
+  font-weight: 600;
+  font-size: 0.92rem;
+  font-family: var(--font-family);
+  animation: slideInLeft 0.3s ease;
+}
+
+.floating-qr-tab:hover {
+  transform: translateX(4px);
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #34d399;
+  box-shadow: 6px 0 28px rgba(16, 185, 129, 0.4);
+}
+
+.floating-qr-tab.hidden {
+  display: none !important;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 1. LEFT COLUMN: Sticky QR Code Hub */
+.master-qr-sidebar {
+  width: 350px;
+  min-width: 320px;
+  max-width: 380px;
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 20px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(16, 185, 129, 0.1);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease,
+              width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.35s ease;
+  z-index: 100;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.master-qr-sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  margin-left: -24px !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(-40px);
+  border: none !important;
+}
+
+.qr-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.qr-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #10b981;
+  text-transform: uppercase;
+}
+
+.btn-icon-collapse {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn-icon-collapse:hover {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border-color: #10b981;
+  transform: scale(1.05);
+}
+
+/* Master QR Hero Frame */
+.master-qr-hero {
+  cursor: pointer;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 255, 255, 0.15);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.master-qr-hero:hover {
+  transform: scale(1.02);
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.35), 0 0 25px rgba(16, 185, 129, 0.25);
+}
+
+.master-qr-hero-frame {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#master-qr-img {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.qr-zoom-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.master-qr-hero:hover .qr-zoom-overlay {
+  opacity: 1;
+}
+
+.qr-zoom-overlay span {
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Room Code & Player Counter Card */
+.qr-join-info-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.join-code-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.join-code-huge {
+  font-family: var(--font-mono);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+  line-height: 1.1;
+}
+
+.qr-player-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.qr-player-counter strong {
+  color: #34d399;
+  font-size: 0.95rem;
+}
+
+/* QR Sidebar Action Buttons */
+.qr-sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-full {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 16px;
+  font-weight: 600;
+}
+
+.qr-caption-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qr-caption-bar small {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 175px;
+}
+
+/* 2. RIGHT COLUMN: Command Center Main Content */
+.master-main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.35s ease;
+}
+
 /* MASTER SCREEN: Command Center Header */
 .master-header {
   display: flex;
@@ -1997,13 +2296,11 @@ button:disabled {
 }
 
 @keyframes pulse-dot-anim {
-
   0%,
   100% {
     transform: scale(1);
     opacity: 1;
   }
-
   50% {
     transform: scale(1.4);
     opacity: 0.4;
@@ -2014,7 +2311,7 @@ button:disabled {
   font-size: 1.6rem;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .master-join-bar {
@@ -2040,42 +2337,105 @@ button:disabled {
   font-family: var(--font-mono);
 }
 
-.qr-mock-box {
+/* Fullscreen Master QR Modal (Projector View) */
+#master-qr-modal {
+  z-index: 99999 !important;
+}
+
+.master-qr-modal-card {
+  max-width: 580px !important;
+  width: 92% !important;
+  text-align: center;
+  padding: 28px !important;
+  background: rgba(15, 23, 42, 0.96) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(16, 185, 129, 0.25) !important;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin: auto;
+}
+
+.qr-modal-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border-glass-bright);
+  gap: 16px;
+  margin-top: 14px;
 }
 
-.qr-frame {
-  background: #fff;
-  padding: 6px;
-  border-radius: 8px;
-  line-height: 0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+.qr-modal-image-wrapper {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 440px;
+  width: 100%;
 }
 
-#master-qr-img {
-  display: block;
-  border-radius: 4px;
+#master-qr-modal-img {
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 1;
   object-fit: contain;
+  border-radius: 8px;
+  display: block;
 }
 
-.qr-caption {
+.qr-modal-meta {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 8px;
 }
 
-.qr-mock-box small {
+.qr-modal-code {
+  font-size: 1.1rem;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+}
+
+.qr-modal-code span {
+  font-size: 1.5rem;
+  margin-left: 6px;
+}
+
+.qr-modal-count {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+}
+
+.qr-modal-url {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  word-break: break-all;
+  max-width: 480px;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .master-layout-container {
+    flex-direction: column;
+  }
+
+  .master-qr-sidebar {
+    width: 100%;
+    max-width: 100%;
+    position: static;
+    margin-bottom: 16px;
+  }
+
+  .master-qr-sidebar.collapsed {
+    display: none !important;
+  }
+
+  .master-qr-hero {
+    max-width: 320px;
+    margin: 0 auto;
+  }
 }
 
 /* Master KPI Summary Bar */

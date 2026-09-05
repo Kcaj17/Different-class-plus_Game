@@ -1,163 +1,227 @@
 <!-- ================= 2. MASTER SCREEN (National Dashboard) ================= -->
 <section id="view-master" class="hidden-view">
-  <div class="master-header glass-card">
-    <div class="master-brand">
-      <div class="live-indicator">
-        <span class="pulse-dot"></span>
-        <strong>LIVE DASHBOARD: 20 กลุ่มเศรษฐกิจทั่วประเทศ</strong>
-      </div>
-      <h2 class="master-title">แดชบอร์ดภาพรวมจำลองนโยบายเศรษฐกิจ & วินัยการคลัง</h2>
-      <div class="master-join-bar">
-        <span class="join-tag">📲 สแกน QR หรือพิมพ์รหัสเข้าเล่น:</span>
-        <strong class="join-code">ECO-200</strong>
-        <button id="btn-copy-master-link" class="btn-secondary btn-small">🔗 คัดลอกลิงก์ผู้เล่น</button>
-      </div>
-      <div class="master-action-controls"
-        style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-        <button id="btn-master-auth" class="btn-secondary"
-          style="padding: 8px 14px; font-weight: bold; border-color: #f59e0b; color: #fbbf24;">
-          <span id="master-auth-label">🔒 ยืนยันรหัส Admin PIN</span>
-        </button>
-        <button id="btn-master-start" class="btn-primary" style="padding: 8px 16px; font-weight: bold;" disabled>
-          <span>🚀 เริ่มเกม & เติมบอทให้ครบ (Start Game)</span>
-        </button>
-        <button id="btn-master-global-settle" class="btn-warning" style="padding: 8px 16px; font-weight: bold;"
-          disabled>
-          <span>⚙️ ประมวลผลทุกกลุ่มพร้อมกัน (Global Settle)</span>
-        </button>
-        <button id="btn-master-advance-all" class="btn-success" style="padding: 8px 16px; font-weight: bold;" disabled>
-          <span>⏭️ เริ่มรอบถัดไปพร้อมกัน (Next Round All)</span>
-        </button>
-      </div>
-    </div>
+  <!-- Floating QR tab when sidebar is collapsed -->
+  <button id="btn-floating-qr-tab" class="floating-qr-tab hidden" title="คลิกเพื่อเปิดแถบ QR Code สแกนเข้าเล่น">
+    <span class="pulse-dot"></span>
+    <span class="tab-text">📲 QR สแกนเข้าเล่น [ECO-200]</span>
+  </button>
 
-    <div class="qr-mock-box" id="master-qr-box">
-      <div class="qr-frame">
-        <img id="master-qr-img" src="" alt="Real QR Code" width="130" height="130"
-          style="display: block; border-radius: 6px; object-fit: contain; background: #fff;">
+  <div class="master-layout-container" id="master-layout-container">
+    <!-- 1. LEFT COLUMN: Sticky Player Join & Massive QR Hub -->
+    <aside id="master-qr-sidebar" class="master-qr-sidebar glass-card">
+      <div class="qr-sidebar-header">
+        <div class="qr-sidebar-title">
+          <span class="pulse-dot"></span>
+          <span>SCAN TO JOIN</span>
+        </div>
+        <button id="btn-collapse-qr" class="btn-icon-collapse" title="ย่อแถบ QR เพื่อขยายตาราง 20 เขต">
+          <span id="collapse-icon">◀</span>
+        </button>
       </div>
-      <div class="qr-caption">
-        <small id="master-qr-url-text">กำลังโหลด QR...</small>
-        <button id="btn-edit-qr-url" class="btn-secondary"
-          style="padding: 2px 8px; font-size: 0.72rem; border-radius: 4px;" title="แก้ไข IP/URL สำหรับสแกน">✏️ แก้ไข
-          IP/URL</button>
+
+      <!-- Giant QR Frame with click-to-zoom -->
+      <div class="master-qr-hero" id="master-qr-hero" title="คลิกเพื่อขยาย QR Code เต็มจอ (Projector Mode)">
+        <div class="master-qr-hero-frame">
+          <img id="master-qr-img" src="" alt="Master QR Code" />
+          <div class="qr-zoom-overlay">
+            <span>🔍 คลิกขยายเต็มจอ</span>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <!-- Room Code Highlight Box -->
+      <div class="qr-join-info-card">
+        <div class="join-code-label">รหัสห้องสำหรับผู้เล่น</div>
+        <div class="join-code-huge">ECO-200</div>
+        <div class="qr-player-counter">
+          <span class="pulse-dot-mini"></span>
+          ผู้เล่นในระบบ: <strong id="master-qr-player-count">0 / 200 คน</strong>
+        </div>
+      </div>
+
+      <!-- Action buttons & URL display -->
+      <div class="qr-sidebar-actions">
+        <button id="btn-copy-master-link" class="btn-primary btn-full">
+          <span>🔗 คัดลอกลิงก์ผู้เล่น</span>
+        </button>
+        <div class="qr-caption-bar">
+          <small id="master-qr-url-text">กำลังโหลด QR...</small>
+          <button id="btn-edit-qr-url" class="btn-secondary btn-small" title="แก้ไข IP/URL สำหรับสแกน">
+            ✏️ แก้ไข IP/URL
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 2. RIGHT COLUMN: Command Center Header, KPI Bar, Ticker & 20 Districts -->
+    <main class="master-main-content" id="master-main-content">
+      <div class="master-header glass-card">
+        <div class="master-brand">
+          <div class="live-indicator">
+            <span class="pulse-dot"></span>
+            <strong>LIVE DASHBOARD: 20 กลุ่มเศรษฐกิจทั่วประเทศ</strong>
+          </div>
+          <h2 class="master-title">แดชบอร์ดภาพรวมจำลองนโยบายเศรษฐกิจ & วินัยการคลัง</h2>
+          
+          <div class="master-action-controls"
+            style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <button id="btn-master-auth" class="btn-secondary"
+              style="padding: 8px 14px; font-weight: bold; border-color: #f59e0b; color: #fbbf24;">
+              <span id="master-auth-label">🔒 ยืนยันรหัส Admin PIN</span>
+            </button>
+            <button id="btn-master-start" class="btn-primary" style="padding: 8px 16px; font-weight: bold;" disabled>
+              <span>🚀 เริ่มเกม & เติมบอทให้ครบ (Start Game)</span>
+            </button>
+            <button id="btn-master-global-settle" class="btn-warning" style="padding: 8px 16px; font-weight: bold;"
+              disabled>
+              <span>⚙️ ประมวลผลทุกกลุ่มพร้อมกัน (Global Settle)</span>
+            </button>
+            <button id="btn-master-advance-all" class="btn-success" style="padding: 8px 16px; font-weight: bold;" disabled>
+              <span>⏭️ เริ่มรอบถัดไปพร้อมกัน (Next Round All)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- National Macro Summary KPI Bar -->
+      <div class="master-kpi-bar glass-card">
+        <div class="kpi-box">
+          <span class="kpi-label">ผู้เล่นในระบบ</span>
+          <strong class="kpi-val text-accent" id="master-total-players">0 / 200 คน</strong>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">Gini เฉลี่ยทั้งประเทศ</span>
+          <strong class="kpi-val text-warning" id="master-avg-gini">0.450</strong>
+          <small>0=เท่าเทียม, 1=เหลื่อมล้ำสูงสุด</small>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">หนี้สาธารณะ/GDP เฉลี่ย</span>
+          <strong class="kpi-val text-destructive" id="master-avg-debt">62.0%</strong>
+          <small>เพดานวินัยการคลัง 70%</small>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">GDP รวมทุกกลุ่ม</span>
+          <strong class="kpi-val text-success" id="master-total-gdp">20,000,000 บ.</strong>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">ภาษี VAT 7% คืนคลัง</span>
+          <strong class="kpi-val text-primary" id="master-total-vat">0 บ.</strong>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">สถานะกลุ่มปลอดภัย</span>
+          <strong class="kpi-val" id="master-safe-districts">20 / 20 กลุ่ม</strong>
+        </div>
+      </div>
+
+      <!-- Live Ticker & Philosophy Leaderboard Split -->
+      <div class="master-mid-grid">
+        <div class="glass-card ticker-panel">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-icon">⚡</span>
+              <h4>รายงานเหตุการณ์สดในเกม (Live Ticker)</h4>
+            </div>
+            <span class="live-status-pill"><span class="pulse-dot"></span> ถ่ายทอดสด Real-time</span>
+          </div>
+          <div class="ticker-terminal-box">
+            <div id="master-live-ticker-list" class="ticker-stream">
+              <div class="ticker-item ticker-normal">
+                <span class="ticker-time">เริ่มระบบ</span>
+                <span class="ticker-msg">📢 พร้อมเปิดรับผู้เล่น 20 กลุ่ม รวมความจุ 200 คน (สแกน QR Code เพื่อเข้าร่วม)</span>
+              </div>
+              <div class="ticker-item ticker-normal">
+                <span class="ticker-time">นโยบาย</span>
+                <span class="ticker-msg">⚖️ โครงการไทยช่วยไทยพลัส (60/40) และการจัดสวัสดิการลดความเหลื่อมล้ำทางเศรษฐกิจ</span>
+              </div>
+              <div class="ticker-item ticker-normal">
+                <span class="ticker-time">เป้าหมาย</span>
+                <span class="ticker-msg">🎯 รักษาเสถียรภาพการคลัง ควบคุมหนี้สาธารณะไม่เกิน 70% ของ GDP</span>
+              </div>
+              <div class="ticker-item ticker-normal">
+                <span class="ticker-time">แอดมิน</span>
+                <span class="ticker-msg">💡 แผงควบคุม Master Command สามารถคลิก "ส่องเขตนี้" เพื่อดูสุขภาวะและงบประมาณรายกลุ่ม</span>
+              </div>
+              <div class="ticker-item ticker-normal">
+                <span class="ticker-time">เศรษฐกิจ</span>
+                <span class="ticker-msg">📈 ติดตามความเคลื่อนไหวดัชนี GINI, สภาพคล่อง SME, และอัตราการมีงานทำ</span>
+              </div>
+              <div class="ticker-item ticker-normal">
+                <span class="ticker-time">สัญญาณ</span>
+                <span class="ticker-msg">⚡ รอรับสัญญาณการทอยลูกเต๋า D20 และผลการตัดสินใจทางเศรษฐกิจของแต่ละกลุ่ม...</span>
+              </div>
+            </div>
+            <div class="ticker-terminal-footer">
+              <span class="footer-left"><span class="pulse-dot-mini"></span> เฝ้าระวัง 20 เขตเศรษฐกิจต่อเนื่อง</span>
+              <span class="footer-right">D&D Economic Live Stream</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card philosophy-panel">
+          <div class="panel-header">
+            <span class="panel-icon">🏆</span>
+            <h4>การประเมิน 3 แนวคิดเศรษฐกิจ (Philosophy Summary)</h4>
+          </div>
+          <div class="philosophy-grid">
+            <div class="phil-card">
+              <span class="phil-tag">🌟 ประโยชน์นิยม (Utilitarianism)</span>
+              <strong>กลุ่มที่มีคุณภาพชีวิตเฉลี่ยสูงสุด:</strong>
+              <span id="lb-happy-district" class="phil-winner">-</span>
+              <small>เน้นความสุขและประโยชน์รวมสูงสุดของสังคม</small>
+            </div>
+            <div class="phil-card">
+              <span class="phil-tag">⚖️ ยุติธรรมของ Rawls (Rawlsianism)</span>
+              <strong>กลุ่มที่มีความเหลื่อมล้ำต่ำสุด (Lowest Gini):</strong>
+              <span id="lb-equal-district" class="phil-winner">-</span>
+              <small>เน้นยกระดับผู้ที่มีรายได้น้อยที่สุดในสังคม</small>
+            </div>
+            <div class="phil-card">
+              <span class="phil-tag">🚀 ความเสมอภาคทางโอกาส (Opportunity)</span>
+              <strong>กลุ่มที่รักษาวินัยการคลังยอดเยี่ยม:</strong>
+              <span id="lb-prudent-district" class="phil-winner">-</span>
+              <small>สร้างโอกาสเข้าถึงสินเชื่อและการศึกษาอย่างทั่วถึง</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 20 Districts Real-time Grid -->
+      <div class="districts-section">
+        <div class="section-title-bar">
+          <h3>🗺️ สถานะ 20 เขตเศรษฐกิจทั่วประเทศ (คลิก "ส่องเขตนี้" เพื่อดูเจาะลึก)</h3>
+          <span class="sub-hint">อัปเดตอัตโนมัติแบบ Real-time ทุก 4 วินาที</span>
+        </div>
+        <div id="master-districts-grid" class="districts-grid">
+          <!-- Dynamically populated 20 cards -->
+        </div>
+      </div>
+    </main>
   </div>
 
-  <!-- National Macro Summary KPI Bar -->
-  <div class="master-kpi-bar glass-card">
-    <div class="kpi-box">
-      <span class="kpi-label">ผู้เล่นในระบบ</span>
-      <strong class="kpi-val text-accent" id="master-total-players">0 / 200 คน</strong>
-    </div>
-    <div class="kpi-box">
-      <span class="kpi-label">Gini เฉลี่ยทั้งประเทศ</span>
-      <strong class="kpi-val text-warning" id="master-avg-gini">0.450</strong>
-      <small>0=เท่าเทียม, 1=เหลื่อมล้ำสูงสุด</small>
-    </div>
-    <div class="kpi-box">
-      <span class="kpi-label">หนี้สาธารณะ/GDP เฉลี่ย</span>
-      <strong class="kpi-val text-destructive" id="master-avg-debt">62.0%</strong>
-      <small>เพดานวินัยการคลัง 70%</small>
-    </div>
-    <div class="kpi-box">
-      <span class="kpi-label">GDP รวมทุกกลุ่ม</span>
-      <strong class="kpi-val text-success" id="master-total-gdp">20,000,000 บ.</strong>
-    </div>
-    <div class="kpi-box">
-      <span class="kpi-label">ภาษี VAT 7% คืนคลัง</span>
-      <strong class="kpi-val text-primary" id="master-total-vat">0 บ.</strong>
-    </div>
-    <div class="kpi-box">
-      <span class="kpi-label">สถานะกลุ่มปลอดภัย</span>
-      <strong class="kpi-val" id="master-safe-districts">20 / 20 กลุ่ม</strong>
-    </div>
-  </div>
-
-  <!-- Live Ticker & Philosophy Leaderboard Split -->
-  <div class="master-mid-grid">
-    <div class="glass-card ticker-panel">
-      <div class="panel-header">
-        <div class="panel-title-wrap">
-          <span class="panel-icon">⚡</span>
-          <h4>รายงานเหตุการณ์สดในเกม (Live Ticker)</h4>
+  <!-- Giant Fullscreen QR Modal (Projector View) -->
+  <div id="master-qr-modal" class="modal-backdrop hidden">
+    <div class="modal-dialog master-qr-modal-card glass-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="pulse-dot"></span>
+          <h3 class="modal-title" style="margin: 0; font-size: 1.3rem;">📱 สแกน QR Code เพื่อเข้าเล่นเกม ECO-200</h3>
         </div>
-        <span class="live-status-pill"><span class="pulse-dot"></span> ถ่ายทอดสด Real-time</span>
+        <button id="btn-close-qr-modal" class="btn-close-modal" title="ปิดหน้าต่าง">&times;</button>
       </div>
-      <div class="ticker-terminal-box">
-        <div id="master-live-ticker-list" class="ticker-stream">
-          <div class="ticker-item ticker-normal">
-            <span class="ticker-time">เริ่มระบบ</span>
-            <span class="ticker-msg">📢 พร้อมเปิดรับผู้เล่น 20 กลุ่ม รวมความจุ 200 คน (สแกน QR Code
-              เพื่อเข้าร่วม)</span>
-          </div>
-          <div class="ticker-item ticker-normal">
-            <span class="ticker-time">นโยบาย</span>
-            <span class="ticker-msg">⚖️ โครงการไทยช่วยไทยพลัส (60/40)
-              และการจัดสวัสดิการลดความเหลื่อมล้ำทางเศรษฐกิจ</span>
-          </div>
-          <div class="ticker-item ticker-normal">
-            <span class="ticker-time">เป้าหมาย</span>
-            <span class="ticker-msg">🎯 รักษาเสถียรภาพการคลัง ควบคุมหนี้สาธารณะไม่เกิน 70% ของ GDP</span>
-          </div>
-          <div class="ticker-item ticker-normal">
-            <span class="ticker-time">แอดมิน</span>
-            <span class="ticker-msg">💡 แผงควบคุม Master Command สามารถคลิก "ส่องเขตนี้"
-              เพื่อดูสุขภาวะและงบประมาณรายกลุ่ม</span>
-          </div>
-          <div class="ticker-item ticker-normal">
-            <span class="ticker-time">เศรษฐกิจ</span>
-            <span class="ticker-msg">📈 ติดตามความเคลื่อนไหวดัชนี GINI, สภาพคล่อง SME, และอัตราการมีงานทำ</span>
-          </div>
-          <div class="ticker-item ticker-normal">
-            <span class="ticker-time">สัญญาณ</span>
-            <span class="ticker-msg">⚡ รอรับสัญญาณการทอยลูกเต๋า D20 และผลการตัดสินใจทางเศรษฐกิจของแต่ละกลุ่ม...</span>
-          </div>
+      <div class="modal-body qr-modal-body">
+        <div class="qr-modal-image-wrapper">
+          <img id="master-qr-modal-img" src="" alt="Fullscreen QR Code" />
         </div>
-        <div class="ticker-terminal-footer">
-          <span class="footer-left"><span class="pulse-dot-mini"></span> เฝ้าระวัง 20 เขตเศรษฐกิจต่อเนื่อง</span>
-          <span class="footer-right">D&D Economic Live Stream</span>
+        <div class="qr-modal-meta">
+          <div class="qr-modal-code">รหัสห้อง: <span class="join-code">ECO-200</span></div>
+          <div class="qr-modal-count">ผู้เล่นในระบบ: <strong id="master-qr-modal-count" class="text-accent">0 / 200 คน</strong></div>
+          <div id="master-qr-modal-url" class="qr-modal-url"></div>
         </div>
       </div>
-    </div>
-
-    <div class="glass-card philosophy-panel">
-      <div class="panel-header">
-        <span class="panel-icon">🏆</span>
-        <h4>การประเมิน 3 แนวคิดเศรษฐกิจ (Philosophy Summary)</h4>
+      <div class="modal-actions" style="margin-top: 16px; display: flex; justify-content: center; gap: 12px;">
+        <button id="btn-modal-copy-link" class="btn-primary" style="padding: 8px 18px;">🔗 คัดลอกลิงก์ผู้เล่น</button>
+        <button id="btn-modal-close" class="btn-secondary" style="padding: 8px 18px;">ปิดหน้าต่าง (ESC)</button>
       </div>
-      <div class="philosophy-grid">
-        <div class="phil-card">
-          <span class="phil-tag">🌟 ประโยชน์นิยม (Utilitarianism)</span>
-          <strong>กลุ่มที่มีคุณภาพชีวิตเฉลี่ยสูงสุด:</strong>
-          <span id="lb-happy-district" class="phil-winner">-</span>
-          <small>เน้นความสุขและประโยชน์รวมสูงสุดของสังคม</small>
-        </div>
-        <div class="phil-card">
-          <span class="phil-tag">⚖️ ยุติธรรมของ Rawls (Rawlsianism)</span>
-          <strong>กลุ่มที่มีความเหลื่อมล้ำต่ำสุด (Lowest Gini):</strong>
-          <span id="lb-equal-district" class="phil-winner">-</span>
-          <small>เน้นยกระดับผู้ที่มีรายได้น้อยที่สุดในสังคม</small>
-        </div>
-        <div class="phil-card">
-          <span class="phil-tag">🚀 ความเสมอภาคทางโอกาส (Opportunity)</span>
-          <strong>กลุ่มที่รักษาวินัยการคลังยอดเยี่ยม:</strong>
-          <span id="lb-prudent-district" class="phil-winner">-</span>
-          <small>สร้างโอกาสเข้าถึงสินเชื่อและการศึกษาอย่างทั่วถึง</small>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 20 Districts Real-time Grid -->
-  <div class="districts-section">
-    <div class="section-title-bar">
-      <h3>🗺️ สถานะ 20 เขตเศรษฐกิจทั่วประเทศ (คลิก "ส่องเขตนี้" เพื่อดูเจาะลึก)</h3>
-      <span class="sub-hint">อัปเดตอัตโนมัติแบบ Real-time ทุก 4 วินาที</span>
-    </div>
-    <div id="master-districts-grid" class="districts-grid">
-      <!-- Dynamically populated 20 cards -->
     </div>
   </div>
 </section>

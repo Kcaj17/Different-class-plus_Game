@@ -10,6 +10,7 @@ import { showToast } from './js/ui/toast.js';
 import { switchView } from './js/ui/views.js';
 import { initSocketListeners } from './js/events/socketEvents.js';
 import { triggerPlayerD20Roll, triggerPlayerD20Roll as triggerD20Roll } from './js/views/playerView.js';
+import { collapseMasterQrSidebar, expandMasterQrSidebar } from './js/views/masterView.js';
 
 async function bootApp() {
   await loadAllPartials();
@@ -365,6 +366,82 @@ function initEventListeners() {
     }
   }
 
+  // Master QR Sidebar Collapse / Expand Controls
+  const btnCollapseQr = document.getElementById('btn-collapse-qr');
+  if (btnCollapseQr) {
+    btnCollapseQr.addEventListener('click', () => {
+      playSound('click');
+      collapseMasterQrSidebar();
+    });
+  }
+
+  const btnFloatingQrTab = document.getElementById('btn-floating-qr-tab');
+  if (btnFloatingQrTab) {
+    btnFloatingQrTab.addEventListener('click', () => {
+      playSound('click');
+      expandMasterQrSidebar();
+    });
+  }
+
+  // Fullscreen Master QR Zoom Modal (Projector View)
+  const masterQrHero = document.getElementById('master-qr-hero');
+  const modalQrZoom = document.getElementById('master-qr-modal');
+  const btnCloseQrZoom = document.getElementById('btn-close-qr-modal');
+  const btnModalClose = document.getElementById('btn-modal-close');
+  const btnModalCopyLink = document.getElementById('btn-modal-copy-link');
+
+  if (masterQrHero && modalQrZoom) {
+    masterQrHero.addEventListener('click', () => {
+      playSound('click');
+      const mainQrImg = document.getElementById('master-qr-img');
+      const modalImg = document.getElementById('master-qr-modal-img');
+      if (mainQrImg && modalImg && mainQrImg.src) {
+        modalImg.src = mainQrImg.src;
+      }
+      const qrUrl = document.getElementById('master-qr-url-text')?.textContent;
+      const modalUrl = document.getElementById('master-qr-modal-url');
+      if (qrUrl && modalUrl) {
+        modalUrl.textContent = qrUrl;
+      }
+      const totalPlayersEl = document.getElementById('master-total-players');
+      const modalCount = document.getElementById('master-qr-modal-count');
+      if (totalPlayersEl && modalCount) {
+        modalCount.textContent = totalPlayersEl.textContent;
+      }
+      modalQrZoom.classList.remove('hidden');
+    });
+
+    const closeZoomModal = () => {
+      modalQrZoom.classList.add('hidden');
+    };
+
+    if (btnCloseQrZoom) btnCloseQrZoom.addEventListener('click', closeZoomModal);
+    if (btnModalClose) btnModalClose.addEventListener('click', closeZoomModal);
+
+    modalQrZoom.addEventListener('click', (e) => {
+      if (e.target === modalQrZoom) closeZoomModal();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modalQrZoom.classList.contains('hidden')) {
+        closeZoomModal();
+      }
+    });
+  }
+
+  if (btnModalCopyLink) {
+    btnModalCopyLink.addEventListener('click', () => {
+      playSound('click');
+      const qrUrl = document.getElementById('master-qr-url-text')?.textContent;
+      const fullUrl = (qrUrl && qrUrl.startsWith('http')) ? qrUrl : `${window.location.origin}/?view=player`;
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        showToast(`คัดลอกลิงก์: ${fullUrl} เรียบร้อยแล้ว!`, 'success');
+      }).catch(() => {
+        showToast(`ลิงก์ผู้เล่น: ${fullUrl}`, 'info');
+      });
+    });
+  }
+
   // Security: Admin PIN Authentication Controls
   const modalAuth = document.getElementById('modal-admin-auth');
   const btnMasterAuth = document.getElementById('btn-master-auth');
@@ -423,6 +500,7 @@ function initEventListeners() {
         socket.emit('master:start_game');
         showToast('🚀 เริ่มเกมและจัดสรรผู้เล่นจำลอง (บอท) ครบทุกกลุ่มแล้ว!', 'success');
       }
+      collapseMasterQrSidebar();
     });
   }
 
