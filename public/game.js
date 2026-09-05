@@ -9,7 +9,6 @@ import { playSound } from './js/ui/audio.js';
 import { showToast } from './js/ui/toast.js';
 import { switchView } from './js/ui/views.js';
 import { initSocketListeners } from './js/events/socketEvents.js';
-import { triggerPlayerD20Roll, triggerPlayerD20Roll as triggerD20Roll } from './js/views/playerView.js';
 import { collapseMasterQrSidebar, expandMasterQrSidebar } from './js/views/masterView.js';
 
 async function bootApp() {
@@ -124,20 +123,42 @@ function initEventListeners() {
     });
   }
 
+  // District Select Dropdown handler
+  const selectDistrict = document.getElementById('select-district-choice');
+  if (selectDistrict && customBox) {
+    selectDistrict.addEventListener('change', () => {
+      playSound('click');
+      if (selectDistrict.value === 'custom') {
+        customBox.classList.remove('hidden');
+        const roomInput = document.getElementById('input-room-code');
+        if (roomInput) roomInput.focus();
+      } else {
+        customBox.classList.add('hidden');
+      }
+    });
+  }
+
   // Quick Join Button (Single Click / QR Code destination for 200 players)
   const btnQuickJoin = document.getElementById('btn-quick-join-master');
   if (btnQuickJoin) {
     btnQuickJoin.addEventListener('click', () => {
       playSound('click');
       const nameInput = document.getElementById('input-player-name');
+      const roomInput = document.getElementById('input-room-code');
       const playerName = (nameInput ? nameInput.value : '').trim();
+      
+      let districtCode = selectDistrict ? selectDistrict.value : '';
+      if (districtCode === 'custom') {
+        districtCode = (roomInput ? roomInput.value : '').trim();
+      }
 
       btnQuickJoin.disabled = true;
       btnQuickJoin.innerHTML = '<span>⏳ กำลังจัดสรรกลุ่มและบทบาท...</span>';
 
       if (socket) {
         socket.emit('player:quick_join_master', {
-          playerName: playerName || `ผู้เล่น_${Math.floor(Math.random() * 900 + 100)}`
+          playerName: playerName || `ผู้เล่น_${Math.floor(Math.random() * 900 + 100)}`,
+          districtCode: districtCode || null
         });
       }
 
@@ -148,7 +169,7 @@ function initEventListeners() {
     });
   }
 
-  // Standard Join Room
+  // Standard Join Room (Custom room code submit)
   const btnJoin = document.getElementById('btn-join-room');
   if (btnJoin) {
     btnJoin.addEventListener('click', () => {
@@ -159,7 +180,7 @@ function initEventListeners() {
       const playerName = (nameInput ? nameInput.value : '').trim();
 
       if (!roomCode) {
-        showToast('กรุณากรอกรหัสห้อง เช่น DIST-01 หรือกดเข้าร่วมด่วน', 'warning');
+        showToast('กรุณากรอกรหัสห้อง เช่น DIST-02 หรือ 2', 'warning');
         return;
       }
 
@@ -172,6 +193,10 @@ function initEventListeners() {
           isProjector: false
         });
       }
+      setTimeout(() => {
+        btnJoin.disabled = false;
+        btnJoin.innerHTML = '<span>เข้าร่วมกลุ่มนี้</span>';
+      }, 2000);
     });
   }
 
@@ -215,42 +240,7 @@ function initEventListeners() {
     });
   }
 
-  // D20 Roll Trigger Button on Player View
-  const btnRollD20 = document.getElementById('btn-roll-d20');
-  if (btnRollD20) {
-    btnRollD20.addEventListener('click', () => {
-      triggerD20Roll();
-    });
-  }
 
-  // Advance Chapter in Player District
-  const btnAdvanceRound = document.getElementById('btn-district-advance');
-  if (btnAdvanceRound) {
-    btnAdvanceRound.addEventListener('click', () => {
-      playSound('cash');
-      btnAdvanceRound.disabled = true;
-      btnAdvanceRound.innerHTML = '<span>⏳ กำลังประมวลผลเศรษฐกิจ...</span>';
-      if (socket) {
-        socket.emit('district:advance_round');
-      }
-      setTimeout(() => {
-        btnAdvanceRound.disabled = false;
-        btnAdvanceRound.innerHTML = '<span>🚩 ไปยังรอบถัดไป ➔</span>';
-      }, 1500);
-    });
-  }
-
-  // Fill Bots in Player District
-  const btnFillBots = document.getElementById('btn-district-fill-bots');
-  if (btnFillBots) {
-    btnFillBots.addEventListener('click', () => {
-      playSound('click');
-      if (socket) {
-        socket.emit('district:fill_bots');
-        showToast('เติมผู้เล่นจำลอง (บอท) ครบ 10 คนแล้ว!', 'success');
-      }
-    });
-  }
 
   // Close District Inspector Modal
   const btnCloseInspector = document.getElementById('btn-close-inspector-modal');

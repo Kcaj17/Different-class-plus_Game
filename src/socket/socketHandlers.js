@@ -202,6 +202,13 @@ function registerSocketHandlers(io, rooms, options = {}) {
     socket.on('master:global_settle', () => {
       if (!checkAdminAuth()) return;
 
+      const now = Date.now();
+      if (socket._lastMasterSettleTime && (now - socket._lastMasterSettleTime < 1500)) {
+        console.warn('[Master Screen] Ignored rapid duplicate master:global_settle');
+        return;
+      }
+      socket._lastMasterSettleTime = now;
+
       let settledCount = 0;
       let currentRound = 1;
 
@@ -234,6 +241,13 @@ function registerSocketHandlers(io, rooms, options = {}) {
     // Master Control 3: Advance All Districts to Next Quarter with 1 click
     socket.on('master:advance_all', () => {
       if (!checkAdminAuth()) return;
+
+      const now = Date.now();
+      if (socket._lastMasterAdvanceTime && (now - socket._lastMasterAdvanceTime < 1500)) {
+        console.warn('[Master Screen] Ignored rapid duplicate master:advance_all');
+        return;
+      }
+      socket._lastMasterAdvanceTime = now;
 
       let nextRound = 1;
       let isFinalGameOver = false;
@@ -279,10 +293,11 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     // ---------------------------------------------------------
-    // QUICK JOIN MASTER (Single QR Code for 200 Players)
+    // QUICK JOIN MASTER (Single QR Code for 200 Players / Specific District)
     // ---------------------------------------------------------
-    socket.on('player:quick_join_master', ({ playerName }) => {
-      const { room, player } = quickJoinMaster(playerName, socket.id);
+    socket.on('player:quick_join_master', ({ playerName, districtCode, roomCode }) => {
+      const preferred = districtCode || roomCode || null;
+      const { room, player } = quickJoinMaster(playerName, socket.id, preferred);
       socket.roomCode = room.code;
       socket.playerId = player.id;
       socket.join(room.code);
@@ -473,6 +488,14 @@ function registerSocketHandlers(io, rooms, options = {}) {
       const room = rooms.get(roomCode);
       if (!room) return;
 
+      // Rate limiting / debounce guard to prevent rapid duplicate advance
+      const now = Date.now();
+      if (room._lastAdvanceTime && (now - room._lastAdvanceTime < 1500)) {
+        console.warn(`[Advance Round] Ignored rapid duplicate advance for room ${roomCode}`);
+        return;
+      }
+      room._lastAdvanceTime = now;
+
       // Force auto-takeover for any inactive/disconnected players before advancing
       autoTakeoverInactivePlayers(room, true);
       // Auto roll for AI bots before advancing
@@ -556,18 +579,27 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
 
     socket.on('join_room', ({ roomCode, playerName, isProjector }) => {
-      const cleanCode = (roomCode || '').toUpperCase().trim();
+      let cleanCode = (roomCode || '').toUpperCase().trim();
+      // Normalize numeric formats: "2", "DIST-2", "DIST 02" -> "DIST-02"
+      const numMatch = cleanCode.match(/^(?:DIST[-\s]?)?(\d{1,2})$/i);
+      if (numMatch) {
+        const num = parseInt(numMatch[1], 10);
+        if (num >= 1 && num <= 20) {
+          const pad = num < 10 ? `0${num}` : `${num}`;
+          cleanCode = `DIST-${pad}`;
+        }
+      }
+
+      initializeMasterDistricts();
       let room = rooms.get(cleanCode);
 
       if (!room) {
-        socket.emit('join_error', 'ไม่พบห้องรหัสนี้ กรุณาตรวจสอบรหัสห้องอีกครั้ง');
-        return;
+        room = createDistrictRoom(cleanCode);
       }
 
-      socket.join(cleanCode);
-      socket.roomCode = cleanCode;
-
       if (isProjector) {
+        socket.join(cleanCode);
+        socket.roomCode = cleanCode;
         room.hostSocketId = socket.id;
         socket.emit('joined_as_projector', { roomCode: cleanCode, room });
         return;
@@ -576,14 +608,19 @@ function registerSocketHandlers(io, rooms, options = {}) {
       // Check existing player or assign role
       let player = room.players.find(p => p.socketId === socket.id);
       if (!player) {
-        const result = quickJoinMaster(playerName, socket.id);
+        if (room.players.length >= 10) {
+          socket.emit('join_error', `ห้อง ${room.districtName} (${cleanCode}) มีผู้เล่นครบ 10 คนแล้ว`);
+          return;
+        }
+        const result = quickJoinMaster(playerName, socket.id, cleanCode);
         room = result.room;
         player = result.player;
-        socket.roomCode = room.code;
-        socket.join(room.code);
       }
 
+      socket.roomCode = room.code;
       socket.playerId = player.id;
+      socket.join(room.code);
+
       const currentRoundActions = getRoomRoundActions(room, room.round);
       socket.emit('player:init', {
         room,
@@ -592,10 +629,15 @@ function registerSocketHandlers(io, rooms, options = {}) {
         roundActions: currentRoundActions
       });
 
-      io.to(cleanCode).emit('room:updated', { 
+      io.to(room.code).emit('room:updated', { 
         room,
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
+      });
+
+      broadcastNationalUpdate({
+        type: 'join',
+        message: `👤 ${player.name} เข้าร่วมเป็น "${player.className}" ใน ${room.districtName}`
       });
     });
 

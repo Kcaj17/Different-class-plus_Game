@@ -37,10 +37,16 @@ function generateRoomCode() {
 
 // Create a District Room (DND Economic Party)
 function createDistrictRoom(roomCode, districtIndex = 1, hostSocketId = null) {
+  let idx = districtIndex;
+  const numMatch = (roomCode || '').match(/^DIST-(\d+)$/i);
+  if (numMatch) {
+    idx = parseInt(numMatch[1], 10);
+  }
+
   const room = {
     code: roomCode,
-    districtIndex: districtIndex,
-    districtName: `เขตเศรษฐกิจที่ ${districtIndex}`,
+    districtIndex: idx,
+    districtName: `เขตเศรษฐกิจที่ ${idx}`,
     hostSocketId: hostSocketId,
     status: 'waiting', // Wait in assembly hall until 10 players or bots fill
     round: 1,
@@ -108,50 +114,68 @@ function getMasterGameProgress() {
   };
 }
 
-// Auto-Matchmaking: Consolidate Humans First (Fill District 1 -> 2 -> 3...)
-// In-Game (แนวทางที่ 2): Lock active full districts and route late joiners to a new district!
-function quickJoinMaster(playerName, socketId) {
+// Auto-Matchmaking / Specific District Join:
+// 1. If preferredDistrictCode is provided and has space, player joins that exact district!
+// 2. Otherwise, consolidate humans sequentially: Fill District 1 -> District 2 -> etc.
+function quickJoinMaster(playerName, socketId, preferredDistrictCode = null) {
   initializeMasterDistricts();
 
   const gameStarted = isMasterGameStarted();
   let targetRoom = null;
 
-  if (!gameStarted) {
-    // ---------------------------------------------------------
-    // Case 1: LOBBY / PRE-GAME
-    // Consolidate humans sequentially: Fill District 1 (up to 10) -> District 2 -> etc.
-    // ---------------------------------------------------------
-    for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-      const pad = i < 10 ? `0${i}` : `${i}`;
-      const code = `DIST-${pad}`;
-      const room = rooms.get(code);
-      if (!room) continue;
+  // 1. Direct Selection: User specified a preferred district (e.g. DIST-02, 3, DIST-15)
+  if (preferredDistrictCode && typeof preferredDistrictCode === 'string' && preferredDistrictCode.trim() !== '') {
+    let cleanCode = preferredDistrictCode.toUpperCase().trim();
+    // Normalize numeric formats: "2", "DIST-2", "DIST 02" -> "DIST-02"
+    const numMatch = cleanCode.match(/^(?:DIST[-\s]?)?(\d{1,2})$/i);
+    if (numMatch) {
+      const num = parseInt(numMatch[1], 10);
+      if (num >= 1 && num <= TOTAL_DISTRICTS) {
+        const pad = num < 10 ? `0${num}` : `${num}`;
+        cleanCode = `DIST-${pad}`;
+      }
+    }
 
-      if (room.players.length < PLAYERS_PER_DISTRICT) {
+    let room = rooms.get(cleanCode);
+    if (!room) {
+      room = createDistrictRoom(cleanCode);
+    }
+
+    if (room.players.length < PLAYERS_PER_DISTRICT) {
+      targetRoom = room;
+    }
+  }
+
+  // 2. Matchmaking fallback: Auto-assign to first open district
+  if (!targetRoom) {
+    if (!gameStarted) {
+      // Lobby / Pre-Game: Consolidate humans sequentially (DIST-01 -> DIST-02 -> ...)
+      for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
+        const pad = i < 10 ? `0${i}` : `${i}`;
+        const code = `DIST-${pad}`;
+        const room = rooms.get(code);
+        if (!room) continue;
+
+        if (room.players.length < PLAYERS_PER_DISTRICT) {
+          targetRoom = room;
+          break;
+        }
+      }
+    } else {
+      // In-Game: Skip districts that are already playing and full (10 players)
+      for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
+        const pad = i < 10 ? `0${i}` : `${i}`;
+        const code = `DIST-${pad}`;
+        const room = rooms.get(code);
+        if (!room) continue;
+
+        if (room.status === 'playing' && room.players.length >= PLAYERS_PER_DISTRICT) {
+          continue;
+        }
+
         targetRoom = room;
         break;
       }
-    }
-  } else {
-    // ---------------------------------------------------------
-    // Case 2: GAME ALREADY STARTED (แนวทางที่ 2)
-    // Any district that is already 'playing' with full capacity (10 players) is LOCKED.
-    // Late joiners MUST be routed to a new district!
-    // ---------------------------------------------------------
-    for (let i = 1; i <= TOTAL_DISTRICTS; i++) {
-      const pad = i < 10 ? `0${i}` : `${i}`;
-      const code = `DIST-${pad}`;
-      const room = rooms.get(code);
-      if (!room) continue;
-
-      // Skip districts that are already playing and full (10 players)
-      if (room.status === 'playing' && room.players.length >= PLAYERS_PER_DISTRICT) {
-        continue;
-      }
-
-      // Found an open / closed / not-full district
-      targetRoom = room;
-      break;
     }
   }
 

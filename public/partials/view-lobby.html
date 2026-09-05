@@ -33,6 +33,36 @@
           </div>
         </div>
 
+        <div class="input-group" style="margin-bottom: 14px;">
+          <label for="select-district-choice">เลือกกลุ่มเขตเศรษฐกิจ (1 - 20)</label>
+          <div class="input-with-icon">
+            <select id="select-district-choice" class="lobby-select" style="width: 100%; padding: 12px 14px; background: rgba(15, 23, 42, 0.85); color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; font-size: 0.92rem; outline: none; cursor: pointer;">
+              <option value="">🎯 สุ่มจัดสรรกลุ่มอัตโนมัติ (Auto Matchmaking 20 เขต)</option>
+              <option value="DIST-01">📍 เขตเศรษฐกิจที่ 1 (DIST-01)</option>
+              <option value="DIST-02">📍 เขตเศรษฐกิจที่ 2 (DIST-02)</option>
+              <option value="DIST-03">📍 เขตเศรษฐกิจที่ 3 (DIST-03)</option>
+              <option value="DIST-04">📍 เขตเศรษฐกิจที่ 4 (DIST-04)</option>
+              <option value="DIST-05">📍 เขตเศรษฐกิจที่ 5 (DIST-05)</option>
+              <option value="DIST-06">📍 เขตเศรษฐกิจที่ 6 (DIST-06)</option>
+              <option value="DIST-07">📍 เขตเศรษฐกิจที่ 7 (DIST-07)</option>
+              <option value="DIST-08">📍 เขตเศรษฐกิจที่ 8 (DIST-08)</option>
+              <option value="DIST-09">📍 เขตเศรษฐกิจที่ 9 (DIST-09)</option>
+              <option value="DIST-10">📍 เขตเศรษฐกิจที่ 10 (DIST-10)</option>
+              <option value="DIST-11">📍 เขตเศรษฐกิจที่ 11 (DIST-11)</option>
+              <option value="DIST-12">📍 เขตเศรษฐกิจที่ 12 (DIST-12)</option>
+              <option value="DIST-13">📍 เขตเศรษฐกิจที่ 13 (DIST-13)</option>
+              <option value="DIST-14">📍 เขตเศรษฐกิจที่ 14 (DIST-14)</option>
+              <option value="DIST-15">📍 เขตเศรษฐกิจที่ 15 (DIST-15)</option>
+              <option value="DIST-16">📍 เขตเศรษฐกิจที่ 16 (DIST-16)</option>
+              <option value="DIST-17">📍 เขตเศรษฐกิจที่ 17 (DIST-17)</option>
+              <option value="DIST-18">📍 เขตเศรษฐกิจที่ 18 (DIST-18)</option>
+              <option value="DIST-19">📍 เขตเศรษฐกิจที่ 19 (DIST-19)</option>
+              <option value="DIST-20">📍 เขตเศรษฐกิจที่ 20 (DIST-20)</option>
+              <option value="custom">✏️ พิมพ์รหัสห้องอื่นด้วยตนเอง...</option>
+            </select>
+          </div>
+        </div>
+
         <button id="btn-quick-join-master" class="btn-primary btn-large portal-btn">
           <span>⚡ สุ่มบทบาท & เข้าเล่นเกมทันที ➔</span>
         </button>
@@ -43,7 +73,7 @@
           </button>
           <div id="custom-district-input-box" class="custom-district-box hidden">
             <div class="input-inline" style="margin-top: 8px;">
-              <input type="text" id="input-room-code" placeholder="เช่น DIST-01" maxlength="8"
+              <input type="text" id="input-room-code" placeholder="เช่น DIST-02 หรือ 2" maxlength="8"
                 autocapitalize="characters">
               <button id="btn-join-room" class="btn-secondary">เข้าร่วมกลุ่มนี้</button>
             </div>
