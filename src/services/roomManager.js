@@ -243,6 +243,101 @@ function joinSpecificDistrict(roomCode, playerName, socketId) {
   return { room, player, autoStarted };
 }
 
+// Kick a specific player from a district (Admin command)
+function kickPlayerFromDistrict(roomCode, playerId) {
+  const cleanCode = (roomCode || '').toUpperCase().trim();
+  const room = rooms.get(cleanCode);
+  if (!room) return { error: 'ไม่พบห้องนี้ในระบบ' };
+
+  const playerIndex = room.players.findIndex(p => p.id === playerId);
+  if (playerIndex === -1) return { error: 'ไม่พบผู้เล่นนี้ในห้อง' };
+
+  const kickedPlayer = room.players[playerIndex];
+
+  if (room.status === 'waiting') {
+    // In waiting state: Remove player and restore their role back to availableRoles
+    room.players.splice(playerIndex, 1);
+
+    // Find template for this role to put back into availableRoles
+    const template = ROLE_TEMPLATES.find(t => t.id === kickedPlayer.roleType || t.title === kickedPlayer.title);
+    if (template) {
+      if (!room.availableRoles) room.availableRoles = [];
+      room.availableRoles.push(JSON.parse(JSON.stringify(template)));
+      room.availableRoles = shuffleArray(room.availableRoles);
+    }
+  } else {
+    // In playing / active state: Replace human with AI Bot so 10-person macro economy doesn't break
+    const botTemplate = ROLE_TEMPLATES.find(t => t.id === kickedPlayer.roleType || t.title === kickedPlayer.title) || {
+      id: kickedPlayer.roleType || 'laborer',
+      title: kickedPlayer.title || 'พนักงาน/แรงงาน',
+      initialCash: kickedPlayer.cash || 10000,
+      initialHp: 50
+    };
+
+    const replacementBot = {
+      socketId: `bot_${botTemplate.id}_${Date.now()}_${Math.random()}`,
+      id: `${botTemplate.id}_bot_${Math.floor(Math.random()*1000)}`,
+      name: `${kickedPlayer.className || kickedPlayer.title || 'สมาชิก'} 🤖`,
+      isBot: true,
+      isDisconnected: false,
+      ...botTemplate,
+      cash: kickedPlayer.cash,
+      businessValue: kickedPlayer.businessValue || 0,
+      qol: kickedPlayer.qol || 50,
+      debt: kickedPlayer.debt || 0,
+      skillLevel: kickedPlayer.skillLevel || 1,
+      digitalFootprint: kickedPlayer.digitalFootprint || 0,
+      lastD20Roll: null,
+      lastActionDesc: null,
+      lastAiLore: null,
+      hasRolledThisRound: false
+    };
+
+    room.players[playerIndex] = replacementBot;
+  }
+
+  // Recalculate Gini
+  const eco = calculateLorenzAndGini(room.players);
+  room.macroStats.gini = eco.gini;
+
+  return { success: true, room, kickedPlayer };
+}
+
+// Reset a specific district back to initial clean waiting state (Admin command)
+function resetSpecificDistrict(roomCode) {
+  const cleanCode = (roomCode || '').toUpperCase().trim();
+  const room = rooms.get(cleanCode);
+  if (!room) return { error: 'ไม่พบห้องนี้ในระบบ' };
+
+  const prevPlayers = [...room.players];
+
+  // Reset room properties
+  room.status = 'waiting';
+  room.round = 1;
+  room.phase = 'action';
+  room.phaseTimer = 0;
+  room.currentRoundData = ROUNDS_DATA[0];
+  room.macroStats = {
+    gdp: 1000000,
+    debtToGdp: 62.0,
+    totalVelocity: 0,
+    totalVatCollected: 0,
+    totalCoPaySubsidies: 0,
+    gini: 0.45,
+    crisisAlert: null
+  };
+  room.players = [];
+  room.roundActions = {
+    1: THEMATIC_ROUND_ACTIONS[1]
+  };
+  room.actionLog = [];
+  room.d20Logs = [];
+  room.autoBotFill = true;
+  room.availableRoles = shuffleArray(JSON.parse(JSON.stringify(ROLE_TEMPLATES)));
+
+  return { success: true, room, prevPlayers };
+}
+
 // Auto-fill district with bot adventurers if requested or needed
 function fillDistrictBots(room) {
   while (room.players.length < PLAYERS_PER_DISTRICT && room.availableRoles && room.availableRoles.length > 0) {
@@ -453,6 +548,8 @@ module.exports = {
   createCustomDistrict,
   quickJoinMaster,
   joinSpecificDistrict,
+  kickPlayerFromDistrict,
+  resetSpecificDistrict,
   fillDistrictBots,
   startDistrictWithBots,
   finalizeDistrictsAndBots,

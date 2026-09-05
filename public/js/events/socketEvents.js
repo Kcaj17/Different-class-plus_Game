@@ -202,6 +202,28 @@ export function initSocketListeners() {
     }
   });
 
+  socket.on('player:kicked', ({ message }) => {
+    sessionStorage.removeItem('dnd_player_session');
+    setMyPlayer(null);
+    setCurrentRoom(null);
+    setCurrentRoomCode(null);
+
+    // Close any open modals
+    const modalReveal = document.getElementById('modal-character-reveal');
+    if (modalReveal) modalReveal.classList.add('hidden');
+    const modalParty = document.getElementById('modal-party-roster');
+    if (modalParty) modalParty.classList.add('hidden');
+
+    switchView('lobby');
+    showToast(message || 'คุณถูกนำออกจากกลุ่มเรียบร้อยแล้ว', 'warning', 5000);
+    playSound('crisis');
+  });
+
+  socket.on('master:action_error', ({ message }) => {
+    showToast(message || 'เกิดข้อผิดพลาดในการดำเนินการ', 'danger', 4000);
+    playSound('crisis');
+  });
+
   // Security: Admin PIN Authentication Events
   socket.on('master:auth_success', ({ message }) => {
     sessionStorage.setItem('master_auth', 'true');

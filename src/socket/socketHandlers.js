@@ -12,6 +12,8 @@ const {
   createCustomDistrict,
   quickJoinMaster,
   joinSpecificDistrict,
+  kickPlayerFromDistrict,
+  resetSpecificDistrict,
   fillDistrictBots,
   startDistrictWithBots,
   finalizeDistrictsAndBots,
@@ -292,6 +294,100 @@ function registerSocketHandlers(io, rooms, options = {}) {
         });
       }
       console.log(`[Master Screen] Global advance executed (isFinalGameOver: ${isFinalGameOver}).`);
+    });
+
+    // Master Control 4: Kick Player from District
+    socket.on('master:kick_player', ({ roomCode, playerId }) => {
+      if (!checkAdminAuth()) {
+        socket.emit('admin_auth_failed', { message: 'กรุณากรอกรหัส Admin PIN ก่อนดำเนินการ' });
+        return;
+      }
+
+      const result = kickPlayerFromDistrict(roomCode, playerId);
+      if (result.error) {
+        socket.emit('master:action_error', { message: result.error });
+        return;
+      }
+
+      const { room, kickedPlayer } = result;
+
+      // Find socket of kicked player and notify them
+      if (kickedPlayer.socketId) {
+        io.to(kickedPlayer.socketId).emit('player:kicked', {
+          message: `คุณถูกผู้ดูแลระบบนำออกจากกลุ่ม ${room.districtName} (${room.code})`
+        });
+      }
+
+      // Notify the room
+      const currentRoundActions = getRoomRoundActions(room, room.round);
+      io.to(room.code).emit('room:updated', {
+        room,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
+        roundActions: currentRoundActions
+      });
+
+      // Update Inspector Modal on Admin Screen if open
+      const eco = calculateLorenzAndGini(room.players);
+      socket.emit('master:district_details', {
+        room,
+        eco,
+        roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
+      });
+
+      broadcastNationalUpdate({
+        type: 'kick',
+        message: `🚫 ผู้ดูแลระบบนำ ${kickedPlayer.name} ออกจาก ${room.districtName}`
+      });
+
+      console.log(`[Admin] Kicked player ${kickedPlayer.name} (${kickedPlayer.id}) from ${room.code}`);
+    });
+
+    // Master Control 5: Reset Specific District
+    socket.on('master:reset_district', ({ roomCode }) => {
+      if (!checkAdminAuth()) {
+        socket.emit('admin_auth_failed', { message: 'กรุณากรอกรหัส Admin PIN ก่อนดำเนินการ' });
+        return;
+      }
+
+      const result = resetSpecificDistrict(roomCode);
+      if (result.error) {
+        socket.emit('master:action_error', { message: result.error });
+        return;
+      }
+
+      const { room, prevPlayers } = result;
+
+      // Notify all previous human players that the room was reset and return them to lobby
+      prevPlayers.forEach(p => {
+        if (!p.isBot && p.socketId) {
+          io.to(p.socketId).emit('player:kicked', {
+            message: `กลุ่ม ${room.districtName} (${room.code}) ถูกผู้ดูแลระบบรีเซ็ตแล้ว`
+          });
+        }
+      });
+
+      // Notify the room
+      const currentRoundActions = getRoomRoundActions(room, 1);
+      io.to(room.code).emit('room:updated', {
+        room,
+        roundInfo: ROUNDS_DATA[0],
+        roundActions: currentRoundActions
+      });
+
+      // Update Inspector Modal on Admin Screen
+      const eco = calculateLorenzAndGini(room.players);
+      socket.emit('master:district_details', {
+        room,
+        eco,
+        roundInfo: ROUNDS_DATA[0]
+      });
+
+      broadcastNationalUpdate({
+        type: 'reset',
+        message: `🔄 ผู้ดูแลระบบรีเซ็ต ${room.districtName} (${room.code}) กลับสู่สถานะเริ่มต้นเรียบร้อยแล้ว`
+      });
+
+      console.log(`[Admin] Reset district ${room.code}`);
     });
 
     // ---------------------------------------------------------

@@ -67,12 +67,17 @@
 <!-- MODAL: District Inspector (for Master Screen) -->
 <div id="modal-district-inspector" class="modal-backdrop hidden">
   <div class="modal-dialog inspector-dialog glass-card">
-    <div class="modal-header">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
       <div>
         <h3 id="inspector-district-title" class="modal-title">กลุ่มเศรษฐกิจที่ 1</h3>
         <span id="inspector-round-subtitle" class="text-secondary">รอบที่ 1 / 6</span>
       </div>
-      <button id="btn-close-inspector-modal" class="btn-close-modal">✕</button>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="btn-inspector-reset-district" class="btn-secondary btn-small" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.15); padding: 6px 12px; font-size: 0.82rem;" title="รีเซ็ตกลุ่มนี้กลับสู่สถานะเริ่มต้น">
+          <span>🔄 รีเซ็ตกลุ่มนี้</span>
+        </button>
+        <button id="btn-close-inspector-modal" class="btn-close-modal">✕</button>
+      </div>
     </div>
 
     <div class="modal-body inspector-grid">

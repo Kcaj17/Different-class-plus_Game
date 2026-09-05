@@ -271,8 +271,8 @@ export function openDistrictInspector(data) {
   const rosterContainer = document.getElementById('inspector-roster-list');
   if (rosterContainer && room.players) {
     rosterContainer.innerHTML = room.players.map((p, idx) => `
-      <div class="inspector-player-item ${p.isBot ? 'bot-item' : ''}">
-        <div class="player-left">
+      <div class="inspector-player-item ${p.isBot ? 'bot-item' : ''}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <div class="player-left" style="flex: 1; min-width: 0;">
           <span class="player-avatar">${p.avatar || '👤'}</span>
           <div>
             <div class="player-name">
@@ -280,7 +280,7 @@ export function openDistrictInspector(data) {
               ${p.isBot ? '<small class="bot-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 4px;">🤖 บอท</small>' : ''}
               ${p.isDisconnected ? '<small class="offline-badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 4px;">⚠️ ขาดการเชื่อมต่อ</small>' : ''}
             </div>
-            <small class="player-sub">${p.className || p.subTitle}</small>
+            <small class="player-sub">${p.className || p.subTitle || ''}</small>
           </div>
         </div>
         <div class="player-stats-mini">
@@ -288,11 +288,58 @@ export function openDistrictInspector(data) {
           <span>เงิน: <strong>${Math.round(p.cash).toLocaleString()} บ.</strong></span>
           <span>หนี้: <strong>${Math.round(p.debt).toLocaleString()} บ.</strong></span>
         </div>
-        <div class="player-last-action">
-          ${p.lastActionDesc ? `🎲 <em>${p.lastActionDesc}</em>` : '<span class="text-muted">กำลังเตรียมตัดสินใจและทอยเต๋า...</span>'}
+        <div class="player-last-action" style="min-width: 130px; font-size: 0.78rem;">
+          ${p.lastActionDesc ? `🎲 <em>${p.lastActionDesc}</em>` : '<span class="text-muted">กำลังเตรียมตัดสินใจ...</span>'}
         </div>
+        ${!p.isBot ? `
+          <button class="btn-kick-player btn-secondary" data-room-code="${room.code}" data-player-id="${p.id}" data-player-name="${p.name}" style="padding: 4px 10px; font-size: 0.78rem; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #fca5a5; cursor: pointer; border-radius: 6px; white-space: nowrap; transition: all 0.2s;" title="เตะผู้เล่นคนนี้">
+            🚫 เตะ
+          </button>
+        ` : ''}
       </div>
     `).join('');
+
+    // Attach click listeners to all kick buttons
+    rosterContainer.querySelectorAll('.btn-kick-player').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const rCode = btn.dataset.roomCode;
+        const pId = btn.dataset.playerId;
+        const pName = btn.dataset.playerName;
+
+        if (sessionStorage.getItem('master_auth') !== 'true') {
+          const modalAuth = document.getElementById('modal-admin-auth');
+          if (modalAuth) modalAuth.classList.remove('hidden');
+          return;
+        }
+
+        if (confirm(`คุณต้องการเตะผู้เล่น "${pName}" ออกจากกลุ่ม ${rCode} หรือไม่?`)) {
+          playSound('click');
+          if (socket) {
+            socket.emit('master:kick_player', { roomCode: rCode, playerId: pId });
+          }
+        }
+      };
+    });
+  }
+
+  // Bind Reset District Button
+  const btnResetDistrict = document.getElementById('btn-inspector-reset-district');
+  if (btnResetDistrict) {
+    btnResetDistrict.onclick = () => {
+      if (sessionStorage.getItem('master_auth') !== 'true') {
+        const modalAuth = document.getElementById('modal-admin-auth');
+        if (modalAuth) modalAuth.classList.remove('hidden');
+        return;
+      }
+
+      if (confirm(`⚠️ ยืนยันการรีเซ็ตกลุ่ม ${room.districtName} (${room.code}) หรือไม่?\n\nผู้เล่นทั้งหมดในกลุ่มนี้จะถูกส่งกลับหน้า Lobby และกลุ่มจะถูกล้างข้อมูลกลับสู่รอบที่ 1`)) {
+        playSound('click');
+        if (socket) {
+          socket.emit('master:reset_district', { roomCode: room.code });
+        }
+      }
+    };
   }
 
   // Render Inspector Lorenz Chart
