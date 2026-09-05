@@ -8,22 +8,52 @@ import { playSound } from '../ui/audio.js';
 
 let districtInspectorChart = null;
 
+// Sidebar toggle controls
+export function collapseMasterQrSidebar() {
+  const sidebar = document.getElementById('master-qr-sidebar');
+  const floatingTab = document.getElementById('btn-floating-qr-tab');
+  if (sidebar) sidebar.classList.add('collapsed');
+  if (floatingTab) floatingTab.classList.remove('hidden');
+}
+
+export function expandMasterQrSidebar() {
+  const sidebar = document.getElementById('master-qr-sidebar');
+  const floatingTab = document.getElementById('btn-floating-qr-tab');
+  if (sidebar) sidebar.classList.remove('collapsed');
+  if (floatingTab) floatingTab.classList.add('hidden');
+}
+
+export function toggleMasterQrSidebar() {
+  const sidebar = document.getElementById('master-qr-sidebar');
+  if (sidebar && sidebar.classList.contains('collapsed')) {
+    expandMasterQrSidebar();
+  } else {
+    collapseMasterQrSidebar();
+  }
+}
+
 // Update Master QR Code image and display URL
 export function updateMasterQrCode(qrDataUrl, joinUrl) {
   const qrImg = document.getElementById('master-qr-img');
   const qrText = document.getElementById('master-qr-url-text');
+  const modalImg = document.getElementById('master-qr-modal-img');
+  const modalUrl = document.getElementById('master-qr-modal-url');
 
   if (qrText && joinUrl) {
     qrText.textContent = joinUrl;
     qrText.title = joinUrl;
   }
+  if (modalUrl && joinUrl) {
+    modalUrl.textContent = joinUrl;
+  }
 
-  if (qrImg) {
-    if (qrDataUrl) {
-      qrImg.src = qrDataUrl;
-    } else if (joinUrl) {
-      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(joinUrl)}`;
-    }
+  const finalQrUrl = qrDataUrl || (joinUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(joinUrl)}` : '');
+
+  if (qrImg && finalQrUrl) {
+    qrImg.src = finalQrUrl;
+  }
+  if (modalImg && finalQrUrl) {
+    modalImg.src = finalQrUrl;
   }
 }
 
@@ -36,6 +66,21 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
     updateMasterQrCode(qrInfo.qrDataUrl, qrInfo.joinUrl);
   }
 
+  // Update Player count badge on QR sidebar and modal
+  const qrPlayerCount = document.getElementById('master-qr-player-count');
+  const qrModalCount = document.getElementById('master-qr-modal-count');
+  const totalCountText = `${aggregates.totalPlayersCount || 0} / 200 คน`;
+  if (qrPlayerCount) qrPlayerCount.textContent = totalCountText;
+  if (qrModalCount) qrModalCount.textContent = totalCountText;
+
+  // Auto-collapse QR sidebar once the game is active (round > 0)
+  if (aggregates.round && aggregates.round > 0) {
+    if (!sessionStorage.getItem('master_sidebar_collapsed_auto')) {
+      sessionStorage.setItem('master_sidebar_collapsed_auto', 'true');
+      collapseMasterQrSidebar();
+    }
+  }
+
   // 1. National Macro Indicators
   const macro = aggregates.nationalMacro || {};
   const totalPlayersEl = document.getElementById('master-total-players');
@@ -46,7 +91,7 @@ export function renderMasterScreen(aggregates, liveEvent = null, qrInfo = null) 
   const safeDistrictsEl = document.getElementById('master-safe-districts');
 
   if (totalPlayersEl) {
-    totalPlayersEl.textContent = `${aggregates.totalPlayersCount} / 200 คน`;
+    totalPlayersEl.textContent = totalCountText;
   }
   if (avgGiniEl) {
     avgGiniEl.textContent = macro.avgGini !== undefined ? macro.avgGini.toFixed(3) : '0.450';
