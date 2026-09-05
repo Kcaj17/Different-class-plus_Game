@@ -154,6 +154,14 @@ export function renderPlayerView(player, room, roundData, roundActions) {
   } else {
     if (waitingCard) waitingCard.classList.add('hidden');
     if (stepperBar) stepperBar.classList.remove('hidden');
+    if (stage1 && stage2 && stage3) {
+      if (stage1.classList.contains('hidden-stage') && stage2.classList.contains('hidden-stage') && stage3.classList.contains('hidden-stage')) {
+        const targetStage = (player.hasRolledThisRound ? 3 : (currentStage || 1));
+        if (window.goToPlayerStage) {
+          window.goToPlayerStage(targetStage);
+        }
+      }
+    }
   }
 
   // 4. Chapter & Lore (Stage 1)
