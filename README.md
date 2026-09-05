@@ -1,4 +1,4 @@
-# ⚔️ D&D Economic Chronicles: คนละชั้น พลัส 60/40 (Inequality Tycoon)
+# ⚔️ D&D Economic Chronicles: ไทยช่วยไทยพลัส 60/40 (Inequality Tycoon)
 
 > **บอร์ดเกมจำลองเศรษฐศาสตร์นโยบายและการกระจายรายได้แบบ Real-time Multiplayer**  
 > ผสานกลไกการเล่นแบบ **Tabletop RPG (D20 Dice Check & Stat Modifiers)** เข้ากับแบบจำลอง **เศรษฐศาสตร์มหภาค (Macroeconomics Simulation)** รองรับผู้เล่นพร้อมกันสูงสุด **200 คน** (20 เขตเศรษฐกิจ) ควบคุมจากศูนย์บัญชาการจอใหญ่ (**National Command Center**) และขับเคลื่อนเรื่องราวด้วย **AI Dungeon Master (Google Gemini 3.7 Flash)**

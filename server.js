@@ -142,7 +142,7 @@ if (require.main === module) {
   server.listen(DEFAULT_PORT, () => {
     const localIp = getLocalIpAddress();
     console.log(`=======================================================`);
-    console.log(` ⚔️  D&D Economic Chronicles: คนละชั้น พลัส 60/40  ⚔️`);
+    console.log(` ⚔️  D&D Economic Chronicles: ไทยช่วยไทยพลัส 60/40  ⚔️`);
     console.log(` Localhost URL: http://localhost:${DEFAULT_PORT}`);
     console.log(` 📶 Wi-Fi / LAN URL (สำหรับมือถือ): http://${localIp}:${DEFAULT_PORT}/?view=player`);
     console.log(` 🖥️  Master Screen (200 Players): http://localhost:${DEFAULT_PORT}/?view=master`);

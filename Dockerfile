@@ -1,5 +1,5 @@
 # ============================================================
-# Dockerfile for Inequality Tycoon (คนละชั้น พลัส 60/40)
+# Dockerfile for Inequality Tycoon (ไทยช่วยไทยพลัส 60/40)
 # Node.js 20 LTS (Alpine Linux - Lightweight & Secure)
 # ============================================================
 

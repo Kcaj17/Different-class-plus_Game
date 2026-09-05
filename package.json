@@ -1,7 +1,7 @@
 {
   "name": "inequality-tycoon-game",
   "version": "1.0.0",
-  "description": "Multiplayer Economic Policy & Income Distribution Board Game (Inequality Tycoon: คนละชั้น พลัส 60/40)",
+  "description": "Multiplayer Economic Policy & Income Distribution Board Game (Inequality Tycoon: ไทยช่วยไทยพลัส 60/40)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
