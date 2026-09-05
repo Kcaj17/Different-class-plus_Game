@@ -205,6 +205,15 @@ export function renderPlayerView(player, room, roundData, roundActions) {
       diceCube.classList.remove('rolling');
     }
     if (diceHint) diceHint.classList.add('hidden');
+
+    // Restore last roll number and banner upon refresh/reconnect
+    if (player.lastD20Roll) {
+      const numEl = document.getElementById('d20-display-number');
+      if (numEl && player.lastD20Roll.d20) {
+        numEl.textContent = player.lastD20Roll.d20;
+      }
+      renderRollBanner(player.lastD20Roll, false);
+    }
   } else {
     if (btnRoll) {
       btnRoll.disabled = false;
@@ -748,6 +757,57 @@ export function triggerPlayerD20Roll() {
   }
 }
 
+// Render D20 Result Banner (handles both live roll and refresh/reconnect restoration)
+export function renderRollBanner(rollResult, playEffects = false) {
+  if (!rollResult) return;
+  const banner = document.getElementById('d20-result-banner');
+  if (!banner) return;
+
+  const isNat20 = rollResult.isNat20;
+  const isNat1 = rollResult.isNat1;
+  const isSuccess = rollResult.isSuccess;
+
+  let bannerClass = 'banner-success';
+  if (isNat20) {
+    bannerClass = 'banner-nat20';
+    if (playEffects) {
+      playSound('fanfare');
+      triggerScreenShake('gold');
+      spawnFloatingNumber('🌟 ทอยได้ 20 แต้มเต็ม!', 'gold');
+    }
+  } else if (isNat1) {
+    bannerClass = 'banner-nat1';
+    if (playEffects) {
+      playSound('crisis');
+      triggerScreenShake('red');
+      spawnFloatingNumber('⚠️ ทอยได้ 1 แต้ม มีอุปสรรค!', 'hp-loss');
+    }
+  } else if (isSuccess) {
+    bannerClass = 'banner-success';
+    if (playEffects) {
+      playSound('cash');
+      spawnFloatingNumber('✅ สำเร็จ!', 'gold');
+    }
+  } else {
+    bannerClass = 'banner-fail';
+    if (playEffects) {
+      playSound('click');
+    }
+  }
+
+  banner.className = `d20-result-banner ${bannerClass}`;
+  banner.innerHTML = `
+    <div class="result-title">${rollResult.outcomeTitle || 'ผลการดำเนินงาน'}</div>
+    <div class="result-calc">
+      ลูกเต๋า: <strong>${rollResult.d20}</strong> 
+      + แต้มโบนัส: <strong>${rollResult.modifier >= 0 ? `+${rollResult.modifier}` : rollResult.modifier}</strong> 
+      = ผลรวม <strong>${rollResult.totalScore}</strong> (เกณฑ์ผ่าน ${rollResult.dc} แต้ม)
+    </div>
+    <div class="result-desc">${rollResult.outcomeDesc || ''}</div>
+  `;
+  banner.classList.remove('hidden');
+}
+
 // Display Roll Result received from server
 export function showRollResolution(rollResult, myPlayer) {
   // Ensure minimum animation time of 750ms so player enjoys the roll
@@ -787,44 +847,8 @@ export function showRollResolution(rollResult, myPlayer) {
 
     isRolling = false;
 
-    const banner = document.getElementById('d20-result-banner');
-    if (!banner) return;
-
-    const isNat20 = rollResult.isNat20;
-    const isNat1 = rollResult.isNat1;
-    const isSuccess = rollResult.isSuccess;
-
-    let bannerClass = 'banner-success';
-    if (isNat20) {
-      bannerClass = 'banner-nat20';
-      playSound('fanfare');
-      triggerScreenShake('gold');
-      spawnFloatingNumber('🌟 ทอยได้ 20 แต้มเต็ม!', 'gold');
-    } else if (isNat1) {
-      bannerClass = 'banner-nat1';
-      playSound('crisis');
-      triggerScreenShake('red');
-      spawnFloatingNumber('⚠️ ทอยได้ 1 แต้ม มีอุปสรรค!', 'hp-loss');
-    } else if (isSuccess) {
-      bannerClass = 'banner-success';
-      playSound('cash');
-      spawnFloatingNumber('✅ สำเร็จ!', 'gold');
-    } else {
-      bannerClass = 'banner-fail';
-      playSound('click');
-    }
-
-    banner.className = `d20-result-banner ${bannerClass}`;
-    banner.innerHTML = `
-      <div class="result-title">${rollResult.outcomeTitle}</div>
-      <div class="result-calc">
-        ลูกเต๋า: <strong>${rollResult.d20}</strong> 
-        + แต้มโบนัส: <strong>${rollResult.modifier >= 0 ? `+${rollResult.modifier}` : rollResult.modifier}</strong> 
-        = ผลรวม <strong>${rollResult.totalScore}</strong> (เกณฑ์ผ่าน ${rollResult.dc} แต้ม)
-      </div>
-      <div class="result-desc">${rollResult.outcomeDesc}</div>
-    `;
-    banner.classList.remove('hidden');
+    // Render result banner (with audio and animations when triggered by active roll)
+    renderRollBanner(rollResult, true);
 
     // Update vitals in HUD
     if (myPlayer) {

@@ -4,7 +4,11 @@
 
 import { initFinalLorenzChart } from '../charts/lorenzChart.js';
 
-export function renderGameOverView(summary) {
+export function renderGameOverView(roomOrSummary, optionalFinalEval) {
+  // Support both renderGameOverView(room, finalEval) and renderGameOverView(finalEval)
+  const summary = optionalFinalEval 
+    || (roomOrSummary && roomOrSummary.finalGini !== undefined ? roomOrSummary : null) 
+    || (roomOrSummary && roomOrSummary.finalEval ? roomOrSummary.finalEval : null);
   if (!summary) return;
 
   const icon = document.getElementById('go-icon');

@@ -84,6 +84,7 @@ export function initSocketListeners() {
 
     if (room.status === 'gameover') {
       switchView('gameover');
+      renderGameOverView(room, room.finalEval);
       return;
     }
 
