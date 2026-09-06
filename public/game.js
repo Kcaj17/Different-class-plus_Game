@@ -51,7 +51,8 @@ function checkUrlRouting() {
           if (socket) {
             socket.emit('player:reconnect', {
               playerId: session.playerId,
-              roomCode: session.roomCode
+              roomCode: session.roomCode,
+              sessionToken: session.sessionToken
             });
           }
         };

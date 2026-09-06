@@ -59,16 +59,16 @@ export function renderProjectorView(room, roundData) {
 
   // Policy Flash
   const badgeEl = document.getElementById('proj-policy-badge');
-  if (badgeEl) badgeEl.textContent = `📢 นโยบายรอบที่ ${room.round}: ${roundData.policyName || ''}`;
+  if (badgeEl) badgeEl.textContent = `📢 ${roundData.themeBadge || `นโยบายรอบที่ ${room.round}: ${roundData.policyName || roundData.chapterName || ''}`}`;
 
   const titleEl = document.getElementById('proj-policy-title');
-  if (titleEl) titleEl.textContent = roundData.title;
+  if (titleEl) titleEl.textContent = roundData.chapterName || roundData.title || roundData.subTitle || `รอบที่ ${room.round}`;
 
   const descEl = document.getElementById('proj-policy-desc');
-  if (descEl) descEl.textContent = roundData.description;
+  if (descEl) descEl.textContent = roundData.lore || roundData.description || '';
 
   const newsEl = document.getElementById('proj-policy-news');
-  if (newsEl) newsEl.textContent = roundData.newsAlert;
+  if (newsEl) newsEl.textContent = roundData.newsAlert || '';
 
   // Player Leaderboard Roster
   const rosterContainer = document.getElementById('proj-player-list');

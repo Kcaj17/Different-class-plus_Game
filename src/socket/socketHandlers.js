@@ -67,6 +67,19 @@ function registerSocketHandlers(io, rooms, options = {}) {
     });
   }
 
+  // Sanitize room data for public / broadcast emits (strips secret sessionTokens)
+  function getSafeRoomData(room) {
+    if (!room) return null;
+    return {
+      ...room,
+      players: (room.players || []).map(p => {
+        if (!p) return p;
+        const { sessionToken, ...safePlayer } = p;
+        return safePlayer;
+      })
+    };
+  }
+
   io.on('connection', (socket) => {
     console.log(`[Socket Connected] ID: ${socket.id}`);
 
@@ -277,7 +290,9 @@ function registerSocketHandlers(io, rooms, options = {}) {
             room.status = 'gameover';
             room.phase = 'dashboard';
             const finalEval = evaluateFinalResults(room);
-            io.to(code).emit('game_over', { room, finalEval });
+            room.finalEval = finalEval;
+            room.finalGini = finalEval.finalGini;
+            io.to(code).emit('game_over', { room: getSafeRoomData(room), finalEval });
           }
         }
       }
@@ -405,7 +420,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       // Always initialize local player state & show character reveal card
       socket.emit('player:init', {
-        room,
+        room: getSafeRoomData(room),
         myPlayer: player,
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
@@ -413,12 +428,12 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       if (autoStarted) {
         io.to(room.code).emit('room:started', {
-          room,
+          room: getSafeRoomData(room),
           roundInfo: ROUNDS_DATA[0],
           roundActions: currentRoundActions
         });
         io.to(room.code).emit('room:updated', { 
-          room,
+          room: getSafeRoomData(room),
           roundInfo: ROUNDS_DATA[0],
           roundActions: currentRoundActions
         });
@@ -430,7 +445,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
         });
       } else {
         io.to(room.code).emit('room:updated', { 
-          room,
+          room: getSafeRoomData(room),
           roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
           roundActions: currentRoundActions
         });
@@ -457,16 +472,16 @@ function registerSocketHandlers(io, rooms, options = {}) {
       const currentRoundActions = getRoomRoundActions(room, room.round);
 
       socket.emit('player:init', {
-        room,
+        room: getSafeRoomData(room),
         myPlayer: player,
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
       });
 
-      socket.emit('room:created', { roomCode: room.code, room });
+      socket.emit('room:created', { roomCode: room.code, room: getSafeRoomData(room) });
 
       io.to(room.code).emit('room:updated', {
-        room,
+        room: getSafeRoomData(room),
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
       });
@@ -480,7 +495,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
     // ---------------------------------------------------------
     // PLAYER RECONNECT (Seamless session restore on refresh)
     // ---------------------------------------------------------
-    socket.on('player:reconnect', ({ playerId, roomCode }) => {
+    socket.on('player:reconnect', ({ playerId, roomCode, sessionToken }) => {
       const cleanCode = (roomCode || '').toUpperCase().trim();
       const room = rooms.get(cleanCode);
 
@@ -501,6 +516,22 @@ function registerSocketHandlers(io, rooms, options = {}) {
         return;
       }
 
+      // Security: Validate session token to prevent unauthorized impersonation
+      if (player.sessionToken && (!sessionToken || player.sessionToken !== sessionToken)) {
+        socket.emit('player:reconnect_failed', {
+          reason: 'invalid_session_token',
+          message: 'รหัสประจำตัวเซสชันไม่ถูกต้อง หรือคุณไม่มีสิทธิ์เข้าถึงตัวละครนี้'
+        });
+        return;
+      }
+
+      // If existing connection is active on another socket, notify previous socket
+      if (player.socketId && player.socketId !== socket.id) {
+        io.to(player.socketId).emit('player:session_transferred', {
+          message: 'มีการเชื่อมต่อเซสชันใหม่จากอุปกรณ์อื่น'
+        });
+      }
+
       // Clear any pending disconnect takeover timer
       if (disconnectTimers.has(player.id)) {
         clearTimeout(disconnectTimers.get(player.id));
@@ -516,9 +547,15 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       console.log(`[Player Reconnected] ${player.name} (${player.className}) resumed in ${room.districtName} (${cleanCode})`);
 
+      // Ensure room.finalEval is populated if room is already in gameover state
+      if (room.status === 'gameover' && !room.finalEval) {
+        room.finalEval = evaluateFinalResults(room);
+        room.finalGini = room.finalEval.finalGini;
+      }
+
       const currentRoundActions = getRoomRoundActions(room, room.round);
       socket.emit('player:reconnected', {
-        room,
+        room: getSafeRoomData(room),
         myPlayer: player,
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
@@ -526,7 +563,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       // Update other players in district that this player is back
       io.to(cleanCode).emit('room:updated', { 
-        room,
+        room: getSafeRoomData(room),
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
       });
@@ -645,6 +682,21 @@ function registerSocketHandlers(io, rooms, options = {}) {
       const room = rooms.get(roomCode);
       if (!room) return;
 
+      // Authorization Check: Must be a legitimate player in this district or an Admin
+      if (!socket.playerId && !socket.isAdminAuthenticated) {
+        socket.emit('action_error', { message: 'ไม่อนุญาตให้ผู้ชมสั่งเปลี่ยนรอบ' });
+        return;
+      }
+
+      // Verification Check: All connected human players must have completed their roll (unless Admin override)
+      const unrolledHumans = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
+      if (unrolledHumans.length > 0 && !socket.isAdminAuthenticated) {
+        socket.emit('action_error', {
+          message: `ยังไม่สามารถเริ่มรอบถัดไปได้ เนื่องจากมีสมาชิก (${unrolledHumans.map(p => p.name).join(', ')}) ยังไม่ได้ทอยลูกเต๋า`
+        });
+        return;
+      }
+
       // Rate limiting / debounce guard to prevent rapid duplicate advance
       const now = Date.now();
       if (room._lastAdvanceTime && (now - room._lastAdvanceTime < 1500)) {
@@ -671,12 +723,14 @@ function registerSocketHandlers(io, rooms, options = {}) {
         room.status = 'gameover';
         room.phase = 'dashboard';
         const finalEval = evaluateFinalResults(room);
-        io.to(roomCode).emit('game_over', { room, finalEval });
+        room.finalEval = finalEval;
+        room.finalGini = finalEval.finalGini;
+        io.to(roomCode).emit('game_over', { room: getSafeRoomData(room), finalEval });
       }
 
       const currentRoundActions = getRoomRoundActions(room, room.round);
       io.to(roomCode).emit('room:updated', {
-        room,
+        room: getSafeRoomData(room),
         settlement,
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
@@ -747,8 +801,10 @@ function registerSocketHandlers(io, rooms, options = {}) {
       if (isProjector) {
         socket.join(cleanCode);
         socket.roomCode = cleanCode;
+        socket.isProjector = true;
         room.hostSocketId = socket.id;
-        socket.emit('joined_as_projector', { roomCode: cleanCode, room });
+        const roundInfo = room.currentRoundData || (room.round ? ROUNDS_DATA[room.round - 1] : ROUNDS_DATA[0]);
+        socket.emit('joined_as_projector', { roomCode: cleanCode, room: getSafeRoomData(room), roundInfo });
         return;
       }
 

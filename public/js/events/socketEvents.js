@@ -46,7 +46,8 @@ export function initSocketListeners() {
       sessionStorage.setItem('dnd_player_session', JSON.stringify({
         playerId: myPlayer.id,
         roomCode: room.code,
-        playerName: myPlayer.name
+        playerName: myPlayer.name,
+        sessionToken: myPlayer.sessionToken
       }));
     } catch (e) {
       console.warn('Could not save session to sessionStorage:', e);
@@ -72,7 +73,8 @@ export function initSocketListeners() {
       sessionStorage.setItem('dnd_player_session', JSON.stringify({
         playerId: myPlayer.id,
         roomCode: room.code,
-        playerName: myPlayer.name
+        playerName: myPlayer.name,
+        sessionToken: myPlayer.sessionToken
       }));
     } catch (e) {
       console.warn('Could not save session to sessionStorage:', e);
@@ -192,6 +194,25 @@ export function initSocketListeners() {
     playSound('fanfare');
     switchView('gameover');
     renderGameOverView(room, finalEval);
+  });
+
+  socket.on('joined_as_projector', ({ roomCode, room, roundInfo }) => {
+    setIsProjector(true);
+    setCurrentRoomCode(roomCode);
+    setCurrentRoom(room);
+    switchView('projector');
+    renderProjectorView(room, roundInfo || room.currentRoundData || {});
+  });
+
+  socket.on('action_error', ({ message }) => {
+    showToast(`⚠️ ${message || 'ไม่สามารถดำเนินการได้'}`, 'warning', 4000);
+    playSound('crisis');
+  });
+
+  socket.on('player:session_transferred', ({ message }) => {
+    sessionStorage.removeItem('dnd_player_session');
+    showToast(message || 'มีการเชื่อมต่อใหม่จากอุปกรณ์อื่น เซสชันนี้ถูกยกเลิกแล้ว', 'info', 5000);
+    switchView('lobby');
   });
 
   socket.on('join_error', (msg) => {

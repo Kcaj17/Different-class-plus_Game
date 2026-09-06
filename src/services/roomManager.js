@@ -134,9 +134,11 @@ function addPlayerToDistrictRoom(room, playerName, socketId) {
   const roleTemplate = room.availableRoles.pop();
 
   const cleanName = sanitizeText(playerName, 24);
+  const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 12)}_${Math.floor(Math.random() * 10000)}`;
   const player = {
     socketId: socketId,
     id: `${roleTemplate.id}_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+    sessionToken: sessionToken,
     name: cleanName && cleanName !== '' ? cleanName : roleTemplate.title,
     isBot: false,
     isDisconnected: false,
