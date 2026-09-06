@@ -117,7 +117,11 @@ export function initSocketListeners() {
     showRollResolution(rollResult, myPlayer);
   });
 
-  socket.on('player:ai_lore', ({ aiLore }) => {
+  socket.on('player:ai_lore', ({ aiLore, round }) => {
+    // If this AI lore belongs to a past round, ignore it to prevent stale lore
+    if (round && state.currentRoom && state.currentRoom.round !== round) {
+      return;
+    }
     if (state.myPlayer) {
       state.myPlayer.lastAiLore = aiLore;
     }
@@ -190,7 +194,6 @@ export function initSocketListeners() {
   });
 
   socket.on('game_over', ({ room, finalEval }) => {
-    sessionStorage.removeItem('dnd_player_session');
     playSound('fanfare');
     switchView('gameover');
     renderGameOverView(room, finalEval);
@@ -200,6 +203,11 @@ export function initSocketListeners() {
     setIsProjector(true);
     setCurrentRoomCode(roomCode);
     setCurrentRoom(room);
+    if (room && room.status === 'gameover') {
+      switchView('gameover');
+      renderGameOverView(room, room.finalEval);
+      return;
+    }
     switchView('projector');
     renderProjectorView(room, roundInfo || room.currentRoundData || {});
   });

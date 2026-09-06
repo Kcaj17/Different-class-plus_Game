@@ -3,7 +3,8 @@
    ========================================================= */
 
 export function renderProjectorView(room, roundData) {
-  if (!room || !roundData) return;
+  if (!room) return;
+  const roundInfo = roundData || room.currentRoundData || {};
 
   // Macro Bar
   const roundIndicator = document.getElementById('proj-round-indicator');
@@ -59,18 +60,23 @@ export function renderProjectorView(room, roundData) {
 
   // Policy Flash
   const badgeEl = document.getElementById('proj-policy-badge');
-  if (badgeEl) badgeEl.textContent = `📢 ${roundData.themeBadge || `นโยบายรอบที่ ${room.round}: ${roundData.policyName || roundData.chapterName || ''}`}`;
+  if (badgeEl) badgeEl.textContent = `📢 ${roundInfo.themeBadge || `นโยบายรอบที่ ${room.round}: ${roundInfo.policyName || roundInfo.chapterName || ''}`}`;
 
   const titleEl = document.getElementById('proj-policy-title');
-  if (titleEl) titleEl.textContent = roundData.chapterName || roundData.title || roundData.subTitle || `รอบที่ ${room.round}`;
+  if (titleEl) titleEl.textContent = roundInfo.chapterName || roundInfo.title || roundInfo.subTitle || `รอบที่ ${room.round}`;
 
   const descEl = document.getElementById('proj-policy-desc');
-  if (descEl) descEl.textContent = roundData.lore || roundData.description || '';
+  if (descEl) descEl.textContent = roundInfo.lore || roundInfo.description || '';
 
   const newsEl = document.getElementById('proj-policy-news');
-  if (newsEl) newsEl.textContent = roundData.newsAlert || '';
+  if (newsEl) newsEl.textContent = roundInfo.newsAlert || '';
 
   // Player Leaderboard Roster
+  const countBadgeEl = document.getElementById('proj-player-count-badge');
+  if (countBadgeEl && room.players) {
+    countBadgeEl.textContent = `${room.players.length} คนในเขต`;
+  }
+
   const rosterContainer = document.getElementById('proj-player-list');
   if (rosterContainer && room.players) {
     const sorted = [...room.players].sort((a, b) => 
@@ -91,5 +97,70 @@ export function renderProjectorView(room, roundData) {
         </div>
       `;
     }).join('');
+  }
+
+  // Dynamic Lorenz curve on projector screen if canvas and Chart.js are available
+  const lorenzCanvas = document.getElementById('chart-lorenz-proj');
+  if (lorenzCanvas && typeof Chart !== 'undefined' && room.players && room.players.length > 0) {
+    try {
+      if (!window._projLorenzChart) {
+        const ctx = lorenzCanvas.getContext('2d');
+        window._projLorenzChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [
+              {
+                label: 'เส้นความเท่าเทียม (45°)',
+                data: [{ x: 0, y: 0 }, { x: 100, y: 100 }],
+                borderColor: 'rgba(59, 130, 246, 0.7)',
+                borderDash: [5, 5],
+                borderWidth: 1.5,
+                pointRadius: 0,
+                fill: false
+              },
+              {
+                label: 'เส้นโค้งลอเรนซ์จริง',
+                data: [{ x: 0, y: 0 }, { x: 100, y: 100 }],
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                borderWidth: 2.5,
+                fill: true,
+                pointRadius: 3,
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { min: 0, max: 100, ticks: { color: '#94a3b8' } },
+              y: { min: 0, max: 100, ticks: { color: '#94a3b8' } }
+            }
+          }
+        });
+      }
+      const wealths = room.players.map(p => Math.max(0, (p.cash || 0) + (p.businessValue || 0) - (p.debt || 0))).sort((a, b) => a - b);
+      const totalW = wealths.reduce((s, w) => s + w, 0);
+      const points = [{ x: 0, y: 0 }];
+      if (totalW > 0) {
+        let cumW = 0;
+        wealths.forEach((w, i) => {
+          cumW += w;
+          points.push({
+            x: Math.round(((i + 1) / wealths.length) * 100),
+            y: Number(((cumW / totalW) * 100).toFixed(1))
+          });
+        });
+      } else {
+        points.push({ x: 100, y: 100 });
+      }
+      if (window._projLorenzChart && window._projLorenzChart.data && window._projLorenzChart.data.datasets[1]) {
+        window._projLorenzChart.data.datasets[1].data = points;
+        window._projLorenzChart.update();
+      }
+    } catch (e) {
+      // Graceful fallback for headless or non-canvas test environments
+    }
   }
 }

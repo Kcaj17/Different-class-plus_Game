@@ -207,13 +207,11 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
   } else if (role === 'general_citizen') {
     if (actionCategory === 'copay_sme') {
       const totalSpend = 3000;
-      let citizenPay = totalSpend;
-      if (player.coPayEligible && (room.round === 3 || room.round === 4)) {
-        citizenPay = totalSpend * 0.40; // จ่าย 40% รัฐช่วย 60%
-        coPayImpact = totalSpend * 0.60;
-      }
+      const isCopay = player.coPayEligible && (room.round === 3 || room.round === 4);
+      const citizenPay = isCopay ? totalSpend * 0.40 : totalSpend;
       if (player.cash >= citizenPay) {
         player.cash -= citizenPay;
+        coPayImpact = isCopay ? totalSpend * 0.60 : 0;
         velocityImpact = totalSpend;
         vatImpact = totalSpend * 0.07;
         qolChange = isNat20 ? 18 : (isSuccess ? 12 : 6);
@@ -229,6 +227,30 @@ function resolvePlayerDndRoll(room, player, actionId, forcedD20 = null) {
           ? `สแกน 60/40 ซื้อของร้านชุมชนสำเร็จ! จ่ายจริงเพียง ${citizenPay} บ. (รัฐอุดหนุน ${coPayImpact} บ.) สุขภาวะพุ่ง!`
           : `ซื้อของสำเร็จแต่ระบบแอปขัดข้องเล็กน้อย จ่าย ${citizenPay} บ.`;
       } else {
+        coPayImpact = 0;
+        outcomeDesc = `เงินสดไม่เพียงพอสำหรับซื้อสินค้า`;
+      }
+    } else if (actionCategory === 'copay_mall') {
+      const totalSpend = 3000;
+      const isCopay = player.coPayEligible && (room.round === 3 || room.round === 4);
+      const citizenPay = isCopay ? totalSpend * 0.40 : totalSpend;
+      if (player.cash >= citizenPay) {
+        player.cash -= citizenPay;
+        coPayImpact = isCopay ? totalSpend * 0.60 : 0;
+        velocityImpact = totalSpend;
+        vatImpact = totalSpend * 0.07;
+        qolChange = isNat20 ? 18 : (isSuccess ? 12 : 6);
+
+        // Money flows to Capitalist (ธุรกิจขนาดใหญ่ / ห้างค้าปลีก)
+        if (capitalist) {
+          capitalist.cash += totalSpend;
+        }
+
+        outcomeDesc = isSuccess
+          ? `สแกน 60/40 ช้อปปิ้งห้างใหญ่สำเร็จ! จ่ายจริงเพียง ${citizenPay} บ. (รัฐอุดหนุน ${coPayImpact} บ.) ได้สินค้าตุนเข้าบ้านราคาคุ้มค่า!`
+          : `ซื้อของห้างใหญ่สำเร็จแต่ระบบชำระเงินล่าช้า จ่าย ${citizenPay} บ.`;
+      } else {
+        coPayImpact = 0;
         outcomeDesc = `เงินสดไม่เพียงพอสำหรับซื้อสินค้า`;
       }
     } else if (actionCategory === 'upgrade_skill' || actionCategory === 'skill_up') {
@@ -407,15 +429,20 @@ function autoRollDistrictBots(room) {
 }
 
 // Auto-Bot Takeover: Take over for human players who disconnected or timed out
-function autoTakeoverInactivePlayers(room, forceAllInactive = false) {
+function autoTakeoverInactivePlayers(room, targetOrForce = false) {
   const currentRoundActions = (room.roundActions && room.roundActions[room.round]) 
     || (THEMATIC_ROUND_ACTIONS && THEMATIC_ROUND_ACTIONS[room.round]);
 
   const takenOver = [];
+  const isTargeted = typeof targetOrForce === 'string';
+  const forceAllInactive = targetOrForce === true;
 
   room.players.forEach(p => {
     if (p.isBot) return;
     if (p.hasRolledThisRound) return; // Already completed action this round
+
+    // If targeted to a specific player ID, only match that player
+    if (isTargeted && p.id !== targetOrForce) return;
 
     // Take over if player is marked disconnected OR if forced (e.g. before round advance)
     if (p.isDisconnected || forceAllInactive) {

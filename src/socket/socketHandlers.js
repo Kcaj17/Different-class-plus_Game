@@ -202,8 +202,8 @@ function registerSocketHandlers(io, rooms, options = {}) {
           room.currentRoundData = ROUNDS_DATA[0];
           room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
           const currentRoundActions = getRoomRoundActions(room, 1);
-          io.to(code).emit('room:started', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
-          io.to(code).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+          io.to(code).emit('room:started', { room: getSafeRoomData(room), roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+          io.to(code).emit('room:updated', { room: getSafeRoomData(room), roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
           pregenerateNextRoundActions(room);
         }
       }
@@ -241,7 +241,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
           settledCount++;
 
           io.to(code).emit('room:updated', {
-            room,
+            room: getSafeRoomData(room),
             settlement,
             roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1]
           });
@@ -280,7 +280,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
             room.players.forEach(p => { p.hasRolledThisRound = false; p.lastAiLore = null; });
             const currentRoundActions = getRoomRoundActions(room, room.round);
             io.to(code).emit('room:updated', {
-              room,
+              room: getSafeRoomData(room),
               roundInfo: room.currentRoundData,
               roundActions: currentRoundActions
             });
@@ -336,7 +336,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
       // Notify the room
       const currentRoundActions = getRoomRoundActions(room, room.round);
       io.to(room.code).emit('room:updated', {
-        room,
+        room: getSafeRoomData(room),
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
       });
@@ -384,7 +384,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
       // Notify the room
       const currentRoundActions = getRoomRoundActions(room, 1);
       io.to(room.code).emit('room:updated', {
-        room,
+        room: getSafeRoomData(room),
         roundInfo: ROUNDS_DATA[0],
         roundActions: currentRoundActions
       });
@@ -606,21 +606,8 @@ function registerSocketHandlers(io, rooms, options = {}) {
         // Auto roll for any AI bots in this district that haven't rolled yet
         autoRollDistrictBots(room);
 
-        // Check if all connected human players in this district have now rolled.
-        // If so, take over any remaining disconnected players immediately!
-        const unrolledConnected = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
-        if (unrolledConnected.length === 0) {
-          const takenOver = autoTakeoverInactivePlayers(room);
-          autoRollDistrictBots(room);
-          if (takenOver.length > 0) {
-            io.to(roomCode).emit('room:bot_takeover', {
-              message: `🤖 บอทช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อ (${takenOver.map(t => t.player.name).join(', ')}) เรียบร้อยแล้ว`
-            });
-          }
-        }
-
         // Emit update to the district party
-        io.to(roomCode).emit('room:updated', { room });
+        io.to(roomCode).emit('room:updated', { room: getSafeRoomData(room) });
 
         // Prepare Live Ticker notification for Master Screen
         let tickerMsg = `${player.name} (${room.districtName}): ${rollResult.outcomeTitle}`;
@@ -640,14 +627,20 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
         // 2. Asynchronously generate personalized AI GM lore
         try {
+          const rollRound = room.round;
+          const rollResultRef = rollResult;
           const aiLore = await generateIndividualDndLore(player, rollResult, {
             name: room.districtName,
             round: room.round,
             gini: room.macroStats.gini,
             debtToGdp: room.macroStats.debtToGdp
           });
+          // Prevent stale AI lore from overwriting subsequent round or subsequent roll
+          if (room.round !== rollRound || player.lastD20Roll !== rollResultRef) {
+            return;
+          }
           player.lastAiLore = aiLore;
-          socket.emit('player:ai_lore', { aiLore });
+          socket.emit('player:ai_lore', { aiLore, round: rollRound });
         } catch (err) {
           console.error('AI Lore error:', err);
         }
@@ -664,11 +657,19 @@ function registerSocketHandlers(io, rooms, options = {}) {
       const roomCode = socket.roomCode;
       if (!roomCode) return;
       const room = rooms.get(roomCode);
-      if (!room || room.status !== 'playing') return;
+      if (!room) return;
+
+      // Authorization Check: Must be a legitimate player in this district or an Admin
+      if (!socket.playerId && !socket.isAdminAuthenticated) {
+        socket.emit('action_error', { message: 'ไม่อนุญาตให้ผู้ชมดำเนินการ' });
+        return;
+      }
+
+      if (room.status !== 'playing') return;
 
       const takenOver = autoTakeoverInactivePlayers(room);
       autoRollDistrictBots(room);
-      io.to(roomCode).emit('room:updated', { room });
+      io.to(roomCode).emit('room:updated', { room: getSafeRoomData(room) });
       if (takenOver.length > 0) {
         io.to(roomCode).emit('room:bot_takeover', {
           message: `🤖 บอทเข้าช่วยเล่นแทนผู้เล่นที่หลุดการเชื่อมต่อ (${takenOver.map(t => t.player.name).join(', ')}) ทันที!`
@@ -749,8 +750,14 @@ function registerSocketHandlers(io, rooms, options = {}) {
       const room = rooms.get(roomCode);
       if (!room) return;
 
+      // Authorization Check: Must be a legitimate player in this district or an Admin
+      if (!socket.playerId && !socket.isAdminAuthenticated) {
+        socket.emit('action_error', { message: 'ไม่อนุญาตให้ผู้ชมดำเนินการ' });
+        return;
+      }
+
       fillDistrictBots(room);
-      io.to(roomCode).emit('room:updated', { room });
+      io.to(roomCode).emit('room:updated', { room: getSafeRoomData(room) });
       socket.emit('bots_filled', { count: room.players.length });
 
       broadcastNationalUpdate({
@@ -762,20 +769,28 @@ function registerSocketHandlers(io, rooms, options = {}) {
     socket.on('district:start_with_bots', () => {
       const roomCode = socket.roomCode;
       if (!roomCode) return;
-
-      const room = startDistrictWithBots(roomCode);
+      const room = rooms.get(roomCode);
       if (!room) return;
 
-      const currentRoundActions = getRoomRoundActions(room, 1);
-      io.to(roomCode).emit('room:started', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
-      io.to(roomCode).emit('room:updated', { room, roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
-      pregenerateNextRoundActions(room);
+      // Authorization Check: Must be a legitimate player in this district or an Admin
+      if (!socket.playerId && !socket.isAdminAuthenticated) {
+        socket.emit('action_error', { message: 'ไม่อนุญาตให้ผู้ชมดำเนินการ' });
+        return;
+      }
+
+      const startedRoom = startDistrictWithBots(roomCode);
+      if (!startedRoom) return;
+
+      const currentRoundActions = getRoomRoundActions(startedRoom, 1);
+      io.to(roomCode).emit('room:started', { room: getSafeRoomData(startedRoom), roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+      io.to(roomCode).emit('room:updated', { room: getSafeRoomData(startedRoom), roundInfo: ROUNDS_DATA[0], roundActions: currentRoundActions });
+      pregenerateNextRoundActions(startedRoom);
 
       broadcastNationalUpdate({
         type: 'start',
-        message: `🚀 ${room.districtName} สมาชิกครบ 10 คนแล้ว (เติมบอท 🤖 สมบูรณ์) เริ่มต้นรอบที่ 1!`
+        message: `🚀 ${startedRoom.districtName} สมาชิกครบ 10 คนแล้ว (เติมบอท 🤖 สมบูรณ์) เริ่มต้นรอบที่ 1!`
       });
-      console.log(`[District Started with Bots] ${room.districtName} (${roomCode})`);
+      console.log(`[District Started with Bots] ${startedRoom.districtName} (${roomCode})`);
     });
 
     // ---------------------------------------------------------
@@ -831,7 +846,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       // Always initialize local player state & show character reveal card
       socket.emit('player:init', {
-        room,
+        room: getSafeRoomData(room),
         myPlayer: player,
         roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
         roundActions: currentRoundActions
@@ -839,12 +854,12 @@ function registerSocketHandlers(io, rooms, options = {}) {
 
       if (autoStarted) {
         io.to(cleanCode).emit('room:started', {
-          room,
+          room: getSafeRoomData(room),
           roundInfo: ROUNDS_DATA[0],
           roundActions: currentRoundActions
         });
         io.to(cleanCode).emit('room:updated', { 
-          room,
+          room: getSafeRoomData(room),
           roundInfo: ROUNDS_DATA[0],
           roundActions: currentRoundActions
         });
@@ -856,7 +871,7 @@ function registerSocketHandlers(io, rooms, options = {}) {
         });
       } else {
         io.to(cleanCode).emit('room:updated', { 
-          room,
+          room: getSafeRoomData(room),
           roundInfo: room.currentRoundData || ROUNDS_DATA[room.round - 1],
           roundActions: currentRoundActions
         });
@@ -882,44 +897,27 @@ function registerSocketHandlers(io, rooms, options = {}) {
           });
           console.log(`[Player Marked Disconnected] ${player.name} in ${room.districtName}`);
 
-          if (room.status === 'playing') {
-            // Check if all remaining connected human players have already rolled
-            const unrolledConnected = room.players.filter(p => !p.isBot && !p.isDisconnected && !p.hasRolledThisRound);
-            
-            if (unrolledConnected.length === 0) {
-              // All connected players are already done rolling! Immediately take over so game doesn't stall!
-              console.log(`[Instant Takeover] All connected players already rolled in ${room.districtName}. Bot taking over for ${player.name}`);
-              const takenOver = autoTakeoverInactivePlayers(room);
-              autoRollDistrictBots(room);
-              io.to(code).emit('room:updated', { room });
-              if (takenOver.length > 0) {
-                io.to(code).emit('room:bot_takeover', {
-                  playerName: player.name,
-                  message: `🤖 บอทเข้าช่วยเล่นแทน ${player.name} ที่หลุดการเชื่อมต่อเรียบร้อยแล้ว`
-                });
-              }
-            } else {
-              // Start a 10s grace timeout before taking over for this player
-              if (disconnectTimers.has(player.id)) {
-                clearTimeout(disconnectTimers.get(player.id));
-              }
-              const timer = setTimeout(() => {
-                disconnectTimers.delete(player.id);
-                if (room.status === 'playing' && player.isDisconnected && !player.hasRolledThisRound) {
-                  console.log(`[Disconnect Timer Expired] Triggering bot takeover for ${player.name} in ${room.districtName}`);
-                  const takenOver = autoTakeoverInactivePlayers(room);
-                  autoRollDistrictBots(room);
-                  io.to(code).emit('room:updated', { room });
-                  if (takenOver.length > 0) {
-                    io.to(code).emit('room:bot_takeover', {
-                      playerName: player.name,
-                      message: `🤖 บอทเข้าช่วยเล่นแทน ${player.name} ที่หลุดการเชื่อมต่อเรียบร้อยแล้ว`
-                    });
-                  }
-                }
-              }, 10000); // 10 seconds grace period
-              disconnectTimers.set(player.id, timer);
+          if (room.status === 'playing' && !player.hasRolledThisRound) {
+            // Always grant a 10s grace period for reconnect / refresh before bot takeover
+            if (disconnectTimers.has(player.id)) {
+              clearTimeout(disconnectTimers.get(player.id));
             }
+            const timer = setTimeout(() => {
+              disconnectTimers.delete(player.id);
+              if (room.status === 'playing' && player.isDisconnected && !player.hasRolledThisRound) {
+                console.log(`[Disconnect Timer Expired] Triggering bot takeover for ${player.name} in ${room.districtName}`);
+                const takenOver = autoTakeoverInactivePlayers(room, player.id);
+                autoRollDistrictBots(room);
+                io.to(code).emit('room:updated', { room: getSafeRoomData(room) });
+                if (takenOver.length > 0) {
+                  io.to(code).emit('room:bot_takeover', {
+                    playerName: player.name,
+                    message: `🤖 บอทเข้าช่วยเล่นแทน ${player.name} ที่หลุดการเชื่อมต่อเรียบร้อยแล้ว`
+                  });
+                }
+              }
+            }, 10000); // 10 seconds grace period
+            disconnectTimers.set(player.id, timer);
           }
           break;
         }

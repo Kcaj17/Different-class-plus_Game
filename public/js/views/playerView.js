@@ -14,6 +14,7 @@ let isRolling = false;
 let currentStage = 1;
 let diceRollInterval = null;
 let rollStartTime = 0;
+let rollResolutionTimer = null;
 
 // Global Stage Switcher for Stepper Buttons
 window.goToPlayerStage = function(stageNum) {
@@ -180,8 +181,12 @@ export function renderPlayerView(player, room, roundData, roundActions) {
   renderClassActionChoices(player, room, chapter, roundActions);
 
   // 6. Restore AI Lore if any (instant render, no typewriter animation)
-  if (player.lastAiLore) {
+  const loreBox = document.getElementById('ai-gm-lore-box');
+  if (player.hasRolledThisRound && player.lastAiLore) {
     renderAiGmLoreBox(player.lastAiLore, false);
+  } else if (loreBox) {
+    loreBox.classList.add('hidden');
+    loreBox.innerHTML = '';
   }
 
   // 7. Sync roll state for this round
@@ -813,8 +818,21 @@ export function showRollResolution(rollResult, myPlayer) {
   // Ensure minimum animation time of 750ms so player enjoys the roll
   const elapsed = Date.now() - rollStartTime;
   const remainingDelay = Math.max(0, 750 - elapsed);
+  const targetRound = state.currentRoom ? state.currentRoom.round : null;
 
-  setTimeout(() => {
+  if (rollResolutionTimer) {
+    clearTimeout(rollResolutionTimer);
+    rollResolutionTimer = null;
+  }
+
+  rollResolutionTimer = setTimeout(() => {
+    rollResolutionTimer = null;
+
+    // Discard stale resolution if room already advanced to another round
+    if (targetRound !== null && state.currentRoom && state.currentRoom.round !== targetRound) {
+      return;
+    }
+
     // 1. Stop rolling slot interval
     if (diceRollInterval) {
       clearInterval(diceRollInterval);
@@ -894,6 +912,17 @@ export function handleRollError() {
 
 // Reset mobile player view when advancing to a new quarter
 export function onNewQuarterStarted(newRound) {
+  // Cancel pending roll animation from previous round so it won't disable new round button
+  if (rollResolutionTimer) {
+    clearTimeout(rollResolutionTimer);
+    rollResolutionTimer = null;
+  }
+  if (diceRollInterval) {
+    clearInterval(diceRollInterval);
+    diceRollInterval = null;
+  }
+  isRolling = false;
+
   // 1. Navigate back to Stage 1 (Analyze encounter lore)
   if (window.goToPlayerStage) {
     window.goToPlayerStage(1);
